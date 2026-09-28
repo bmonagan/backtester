@@ -12,12 +12,14 @@ name = "backtester"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "pandas" },
     { name = "pyarrow" },
     { name = "yfinance" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "pandas", specifier = ">=3.0.6" },
     { name = "pyarrow", specifier = ">=25.0.1" },
     { name = "yfinance", specifier = ">=1.7.0" },
 ]
