@@ -1,4 +1,3 @@
-from fetch_data import data 
 from datafeed import DataFeed  
 def main():
     data_source = "data/AAPL_1d.parquet"
