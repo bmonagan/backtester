@@ -30,10 +30,6 @@ class DataFeed:
                 for row in df.itertuples()
                ]
         return bars
-    def __iter__(self) -> Iterator[Bar]:
-        for row in self._data:
-            yield row
-
     def peek_next(self, current_bar:Bar) -> Optional[Bar]:
         """Used by the engine to fill orders at next bar's open."""
         ...
