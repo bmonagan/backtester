@@ -14,15 +14,20 @@ class Bar:
 
 class DataFeed:
     """Yields Bars one at a time — no peeking ahead."""
-    def __init__(self, symbol: str, start: datetime, end: datetime):
+    def __init__(self, symbol: str, start: datetime, end: datetime, data_source: str):
         self.symbol = symbol
         self.start = start
         self.end = end
+        self.data_source = data_source 
         self._data = self._load()  # from Parquet/Postgres
 
     def _load(self):
-        raise NotImplementedError
-
+        df = pd.read_parquet(data_source).set_index("Date").sort_index()
+        bars = [
+                DataBar(date=row.Index, open=row.Open, high=row.High, low=row.Low, close=row.Close, volume=row.Volume)
+                for row in df.itertuples()
+               ]
+        return bars
     def __iter__(self) -> Iterator[Bar]:
         for row in self._data:
             yield row
