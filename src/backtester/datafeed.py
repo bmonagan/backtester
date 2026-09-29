@@ -23,10 +23,10 @@ class DataFeed:
         self._data = self._load()  # from Parquet/Postgres
 
     def _load(self):
-        df = pd.read_parquet(self.data_source).set_index("Date").sort_index()
+        df = pd.read_parquet(self.data_source).sort_index()
         assert not df.empty, "DatatFrame is empty"
         bars = [
-                DataBar(date=row.Index, open=row.Open, high=row.High, low=row.Low, close=row.Close, volume=row.Volume)
+                Bar(timestamp=row.Index, open=row.Open, high=row.High, low=row.Low, close=row.Close, volume=row.Volume)
                 for row in df.itertuples()
                ]
         return bars
