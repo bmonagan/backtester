@@ -16,13 +16,13 @@ class Bar:
 class DataFeed:
     """Yields Bars one at a time — no peeking ahead."""
     def __init__(self, symbol: str, start: datetime, end: datetime, data_source: str):
-        self.symbol = symbol
-        self.start = start
-        self.end = end
         self.data_source = data_source 
         self._data = self._load()  # from Parquet/Postgres
+        self._index_by_date = {bar.date: i for i, bar in enumerate(self.bars)}
 
     def _load(self):
+        # Semi Placeholder function. Not sure what the data source will going forward
+        # will try to keep it modular so it will be open to more data sources.
         df = pd.read_parquet(self.data_source).sort_index()
         assert not df.empty, "DatatFrame is empty"
         bars = [
@@ -34,6 +34,7 @@ class DataFeed:
         for row in self._data:
             yield row
 
-    def peek_next(self) -> Optional[Bar]:
+    def peek_next(self, current_bar:Bar) -> Optional[Bar]:
         """Used by the engine to fill orders at next bar's open."""
         ...
+        if (current_bar)
