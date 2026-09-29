@@ -30,7 +30,13 @@ class DataFeed:
                 for row in df.itertuples()
                ]
         return bars
-    def peek_next(self, current_bar:Bar) -> Optional[Bar]:
-        """Used by the engine to fill orders at next bar's open."""
-        ...
-        if (current_bar)
+     def get_index(self, date) -> int | None:
+        return self._index_by_date.get(date)
+
+    def peek_next(self, date) -> DataBar | None:
+        # Date is a reliable check because we're not checking trades
+        # We are checking prices at distinct points in time
+        idx = self.get_index(date)
+        if idx is None or idx + 1 >= len(self.bars):
+            return None
+        return self.bars[idx + 1]
