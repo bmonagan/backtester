@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterator, Optional
+import pandas as pd
 
 @dataclass
 class Bar:
@@ -22,7 +23,7 @@ class DataFeed:
         self._data = self._load()  # from Parquet/Postgres
 
     def _load(self):
-        df = pd.read_parquet(data_source).set_index("Date").sort_index()
+        df = pd.read_parquet(self.data_source).set_index("Date").sort_index()
         assert not df.empty, "DatatFrame is empty"
         bars = [
                 DataBar(date=row.Index, open=row.Open, high=row.High, low=row.Low, close=row.Close, volume=row.Volume)
