@@ -14,7 +14,7 @@ class Bar:
     volume: float
 
 class DataFeed:
-    def __init__(self, symbol: str, start: datetime, end: datetime, data_source: str):
+    def __init__(self, data_source: str):
         self.data_source = data_source 
         self._bars = self._load()  # from Parquet/Postgres
         self._index_by_date = {bar.timestamp: i for i, bar in enumerate(self.bars)}
