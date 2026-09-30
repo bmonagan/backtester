@@ -14,7 +14,6 @@ class Bar:
     volume: float
 
 class DataFeed:
-    """Yields Bars one at a time — no peeking ahead."""
     def __init__(self, symbol: str, start: datetime, end: datetime, data_source: str):
         self.data_source = data_source 
         self._data = self._load()  # from Parquet/Postgres
