@@ -29,10 +29,11 @@ class DataFeed:
                 for row in df.itertuples()
                ]
         return bars
-     def get_index(self, timestamp) -> int | None:
+    
+    def get_index(self, timestamp) -> int | None:
         return self._index_by_date.get(timestamp)
 
-    def peek_next(self, date) -> DataBar | None:
+    def peek_next(self, date) -> Bar | None:
         # Date is a reliable check because we're not checking trades
         # We are checking prices at distinct points in time
         idx = self.get_index(date)
