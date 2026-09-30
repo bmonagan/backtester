@@ -17,7 +17,7 @@ class DataFeed:
     def __init__(self, symbol: str, start: datetime, end: datetime, data_source: str):
         self.data_source = data_source 
         self._bars = self._load()  # from Parquet/Postgres
-        self._index_by_date = {bar.date: i for i, bar in enumerate(self._bars)}
+        self._index_by_date = {bar.timestamp: i for i, bar in enumerate(self.bars)}
 
     def _load(self):
         # Semi Placeholder function. Not sure what the data source will going forward
@@ -29,8 +29,8 @@ class DataFeed:
                 for row in df.itertuples()
                ]
         return bars
-     def get_index(self, date) -> int | None:
-        return self._index_by_date.get(date)
+     def get_index(self, timestamp) -> int | None:
+        return self._index_by_date.get(timestamp)
 
     def peek_next(self, date) -> DataBar | None:
         # Date is a reliable check because we're not checking trades
