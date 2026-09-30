@@ -16,8 +16,8 @@ class Bar:
 class DataFeed:
     def __init__(self, symbol: str, start: datetime, end: datetime, data_source: str):
         self.data_source = data_source 
-        self._data = self._load()  # from Parquet/Postgres
-        self._index_by_date = {bar.date: i for i, bar in enumerate(self.bars)}
+        self._bars = self._load()  # from Parquet/Postgres
+        self._index_by_date = {bar.date: i for i, bar in enumerate(self._bars)}
 
     def _load(self):
         # Semi Placeholder function. Not sure what the data source will going forward
