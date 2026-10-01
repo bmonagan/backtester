@@ -7,9 +7,11 @@ class BacktestEngine:
         self.history: list[Bar] = []
 
     def run(self) -> Portfolio:
+        last_fast = None
+        last_slow = None
         for bar in self.feed:
             self.history.append(bar)
-            order = self.strategy.on_bar(bar, self.history, self.portfolio)
+            order, last_fast, last_slow = self.strategy.on_bar(bar, self.history, self.portfolio, last_fast, last_slow)
             if order:
                 fill_price = self.feed.peek_next().open  # avoid lookahead bias
                 self.portfolio.execute_order(bar.timestamp, order["symbol"], order["quantity"], fill_price)
