@@ -42,11 +42,14 @@ class SmaCrossoverStrategy(Strategy):
         if (not last_fast and not last_slow):
             return BarResult(None, fast_ma, slow_ma)
         # Golden Cross (Bullish)
-        if (fast_ma > slow_ma and last_fast <= last_slow):
-            order = Order(bar.symbol, "buy", quantity_param)
+        if ((fast_ma > slow_ma) and (last_fast <= last_slow)):
+            order = Order(bar.symbol, "buy", quantity)
             return BarResult(order, fast_ma, slow_ma)
-
-
         # Death Cross (Bearish)
-        if (
+        if ((fast_ma < slow_ma) and (last_fast >= last_slow)):
+            order = Order(bar.symbol, "sell", quantity)
+            return BarResult(order,fast_ma, slow_ma)
+        
+        
+        return BarResult(None, fast_ma, slow_ma)
 
