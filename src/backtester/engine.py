@@ -7,13 +7,18 @@ class BacktestEngine:
         self.history: list[Bar] = []
 
     def run(self) -> Portfolio:
-        last_fast = None
-        last_slow = None
+        last_fast = last_slow = None
         for bar in self.feed:
             self.history.append(bar)
-            order, last_fast, last_slow = self.strategy.on_bar(bar, self.history, self.portfolio, last_fast, last_slow)
+            self.portfolio.mark_to_market(bar.timestamp, {bar.symbol: bar.close})  # mark BEFORE filling
+
+            order, last_fast, last_slow = self.strategy.on_bar(
+                bar, self.history, self.portfolio, last_fast, last_slow
+            )
             if order:
-                fill_price = self.feed.peek_next().open  # avoid lookahead bias
-                self.portfolio.execute_order(bar.timestamp, order["symbol"], order["quantity"], fill_price)
-            self.portfolio.mark_to_market(bar.timestamp, {bar.symbol: bar.close})
+                nxt = self.feed.peek_next(bar.timestamp)
+                if nxt is not None:  # last bar: drop the unfillable order
+                    self.portfolio.execute_order(
+                        nxt.timestamp, order["symbol"], order["quantity"], nxt.open
+                    )
         return self.portfolio
