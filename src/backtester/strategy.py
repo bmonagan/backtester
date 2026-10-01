@@ -28,7 +28,7 @@ class Strategy(ABC):
         ...
 
 class SmaCrossoverStrategy(Strategy):
-    def on_bar(self, bar, history, portfolio, last_fast, last_slow) -> Dict, Float, Float:
+    def on_bar(self, bar, history, portfolio, last_fast, last_slow) -> BarResult:
         fast_period = self.params["fast_window"]
         slow_period = self.params["slow_window"]
         if len(history) < slow:
