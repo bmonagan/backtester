@@ -15,6 +15,8 @@ def main():
     
 
     engine.run()
+    print("Final portfolio:")
+    print(engine.portfolio)
 
     
      
