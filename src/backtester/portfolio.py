@@ -7,6 +7,14 @@ class Position:
     quantity: float = 0.0
     avg_price: float = 0.0
 
+@dataclass
+class PortfolioSnapshot:
+    timestamp: object
+    cash: float
+    holdings_value: float
+    total_equity: float
+    unrealized_pnl: float
+
 class Portfolio:
     def __init__(self, starting_cash: float):
         self.cash = starting_cash
@@ -29,9 +37,18 @@ class Portfolio:
             positions_value += qty * price
             total_cost_basis += qty * self.positions.avg_price
         
-            unrealized_pnl = holding_value - total_cost_basis
-            total_equity = self.cash + holding_value
-
+        unrealized_pnl = holding_value - total_cost_basis
+        total_equity = self.cash + holding_value
+        
+        snapshot = PortfolioSnapshot(
+            timestamp=timestamp,
+            cash=self.cash,
+            holdings_value=holdings_value,
+            total_equity=total_equity,
+            unrealized_pnl=unrealized_pnl
+        )
+        self.history.append(snapshot)
+        return snapshot
 
             
 
