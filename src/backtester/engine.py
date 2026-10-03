@@ -1,4 +1,5 @@
 # engine.py
+from portfolio import Portfolio 
 class BacktestEngine:
     def __init__(self, feed: DataFeed, strategy: Strategy, starting_cash: float):
         self.feed = feed
