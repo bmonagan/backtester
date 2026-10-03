@@ -21,6 +21,7 @@ class Portfolio:
         self.positions: dict[str, Position] = {}
         self.equity_curve: list[tuple] = []  # (timestamp, equity)
         self.trade_log: list[dict] = []
+        self.history: list[PortfolioSnapshot] = []
 
     def mark_to_market(self, timestamp, prices: dict[str, float]):
         """Record current equity given latest prices."""
@@ -37,13 +38,13 @@ class Portfolio:
             positions_value += qty * price
             total_cost_basis += qty * self.positions.avg_price
         
-        unrealized_pnl = holding_value - total_cost_basis
-        total_equity = self.cash + holding_value
-        
+        unrealized_pnl = positions_value - total_cost_basis
+        total_equity = self.cash + positions_value
+
         snapshot = PortfolioSnapshot(
             timestamp=timestamp,
             cash=self.cash,
-            holdings_value=holdings_value,
+            holdings_value= positions_value,
             total_equity=total_equity,
             unrealized_pnl=unrealized_pnl
         )
