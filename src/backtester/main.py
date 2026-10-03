@@ -4,7 +4,7 @@ from engine import BacktestEngine
 
 
 def main():
-    config = {"fast_window": 20, "slow_window": 50}
+    config = {"fast_window": 20, "slow_window": 50, "quantity": 100}
     data_source = "data/AAPL_1d.parquet"
     start_day = "2020-01-01"
     end_day = "2024-01-01"
