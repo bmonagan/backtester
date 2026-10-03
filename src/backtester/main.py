@@ -12,6 +12,9 @@ def main():
     main_feed = DataFeed(symbol = "aapl", start=start_day, end= end_day, data_source = data_source)
     strategy = SmaCrossoverStrategy(**config)
     engine = BacktestEngine(feed=main_feed,strategy=strategy,starting_cash=starting_cash)
+    
+
+    engine.run()
 
     
      
