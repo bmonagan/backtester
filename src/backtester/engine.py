@@ -10,7 +10,7 @@ class BacktestEngine:
         last_fast = last_slow = None
         for bar in self.feed:
             self.history.append(bar)
-            self.portfolio.mark_to_market(bar.timestamp, {bar.symbol: bar.close})  # mark BEFORE filling
+            print(self.portfolio.mark_to_market(bar.timestamp, {bar.symbol: bar.close}))  # mark BEFORE filling
 
             order, last_fast, last_slow = self.strategy.on_bar(
                 bar, self.history, self.portfolio, last_fast, last_slow
