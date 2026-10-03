@@ -16,7 +16,24 @@ class Portfolio:
 
     def mark_to_market(self, timestamp, prices: dict[str, float]):
         """Record current equity given latest prices."""
-        ...
+        positions_value = 0.0
+        total_cost_basis = 0.0
+
+        for ticker,qty in self.positions.items():
+            if qty == 0:
+                continue  
+            price = prices.get(ticker)
+            if price is None:
+                raise KeyError(f"Missing price for active position in {ticker} at {timestamp}")
+
+            positions_value += qty * price
+            total_cost_basis += qty * self.positions.avg_price
+        
+            unrealized_pnl = holding_value - total_cost_basis
+            total_equity = self.cash + holding_value
+
+
+            
 
     def execute_order(self, timestamp, symbol, quantity, fill_price):
         """Update cash/positions, append to trade_log."""
