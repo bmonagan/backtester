@@ -7,6 +7,7 @@ import pandas as pd
 
 @dataclass
 class Bar:
+    # May need to add symbol to the bar at some point if i want to do multiple tickers, but not right now.
     timestamp: datetime
     open: float
     high: float
