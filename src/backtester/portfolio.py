@@ -59,3 +59,6 @@ class Portfolio:
 
     def current_equity(self, prices: dict[str, float]) -> float:
         ...
+
+    def __str__(self):
+        return f"Portfolio: Cash: {self.cash} Positions: {self.positions}"
