@@ -18,8 +18,8 @@ class BacktestEngine:
             order, last_fast, last_slow = self.strategy.on_bar(
                 bar, self.history, self.portfolio, last_fast, last_slow
             )
-            print(order)
             if order:
+                print(order, last_fast, last_slow)
                 nxt = self.feed.peek_next(bar.timestamp)
                 if nxt is not None:  # last bar: drop the unfillable order
                     self.portfolio.execute_order(
