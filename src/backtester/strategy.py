@@ -34,8 +34,8 @@ class SmaCrossoverStrategy(Strategy):
         if not (fast_period and slow_period and quantity):
             raise ValueError("Must include both fast/slow window parameters and the quantity parameter.")
         
-        if len(history) < slow:
-            return None
+        if len(history) < slow_period:
+            return BarResult(None, None, None)
         fast_ma = sum(b.close for b in history[-fast_period:]) / fast_period
         slow_ma = sum(b.close for b in history[-slow_period:]) / slow_period
         
@@ -43,11 +43,13 @@ class SmaCrossoverStrategy(Strategy):
             return BarResult(None, fast_ma, slow_ma)
         # Golden Cross (Bullish)
         if ((fast_ma > slow_ma) and (last_fast <= last_slow)):
-            order = Order(bar.symbol, "buy", quantity)
+            #order = Order(bar.symbol, "buy", quantity)
+            order = Order("AAPL", "buy", quantity)
             return BarResult(order, fast_ma, slow_ma)
         # Death Cross (Bearish)
         if ((fast_ma < slow_ma) and (last_fast >= last_slow)):
-            order = Order(bar.symbol, "sell", quantity)
+            #order = Order(bar.symbol, "sell", quantity)
+            order = Order("AAPL", "sell", quantity)
             return BarResult(order,fast_ma, slow_ma)
         
         
