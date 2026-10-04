@@ -49,7 +49,7 @@ class SmaCrossoverStrategy(Strategy):
         # Death Cross (Bearish)
         if ((fast_ma < slow_ma) and (last_fast >= last_slow)):
             #order = Order(bar.symbol, "sell", quantity)
-            order = Order(symbol="AAPL", action="buy", quantity=quantity)
+            order = Order(symbol="AAPL", action="sell", quantity=-quantity)
             return BarResult(order,fast_ma, slow_ma)
 
         return BarResult(None, fast_ma, slow_ma)
