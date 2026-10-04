@@ -54,63 +54,63 @@ class Portfolio:
             
 
     def execute_order(self, timestamp, symbol: str, quantity: float, fill_price: float) -> bool:
-    """Update cash/positions, append to trade_log."""
-    if quantity == 0:
-        return False
-
-    trade_cost = quantity * fill_price
-
-    # 1. Buying
-    if quantity > 0:
-        if trade_cost > self.cash:
-            print(f"[{timestamp}] Insufficient funds for {quantity} {symbol} @ {fill_price}")
+        """Update cash/positions, append to trade_log."""
+        if quantity == 0:
             return False
 
-        self.cash -= trade_cost
+        trade_cost = quantity * fill_price
 
-        if symbol not in self.positions:
-            self.positions[symbol] = Position(symbol=symbol, quantity=quantity, avg_price=fill_price)
+        # 1. Buying
+        if quantity > 0:
+            if trade_cost > self.cash:
+                print(f"[{timestamp}] Insufficient funds for {quantity} {symbol} @ {fill_price}")
+                return False
+
+            self.cash -= trade_cost
+
+            if symbol not in self.positions:
+                self.positions[symbol] = Position(symbol=symbol, quantity=quantity, avg_price=fill_price)
+            else:
+                pos = self.positions[symbol]
+                new_qty = pos.quantity + quantity
+                total_basis = (pos.quantity * pos.avg_price) + trade_cost
+                self.positions[symbol] = Position(
+                    symbol=symbol,
+                    quantity=new_qty,
+                    avg_price=total_basis / new_qty
+                )
+
+        # 2. Selling
         else:
-            pos = self.positions[symbol]
-            new_qty = pos.quantity + quantity
-            total_basis = (pos.quantity * pos.avg_price) + trade_cost
-            self.positions[symbol] = Position(
-                symbol=symbol,
-                quantity=new_qty,
-                avg_price=total_basis / new_qty
-            )
+            sell_qty = abs(quantity)
+            current_pos = self.positions.get(symbol)
 
-    # 2. Selling
-    else:
-        sell_qty = abs(quantity)
-        current_pos = self.positions.get(symbol)
+            if not current_pos or current_pos.quantity < sell_qty:
+                print(f"[{timestamp}] Cannot sell {sell_qty} {symbol}: insufficient holdings.")
+                return False
 
-        if not current_pos or current_pos.quantity < sell_qty:
-            print(f"[{timestamp}] Cannot sell {sell_qty} {symbol}: insufficient holdings.")
-            return False
+            self.cash += sell_qty * fill_price
+            remaining_qty = current_pos.quantity - sell_qty
 
-        self.cash += sell_qty * fill_price
-        remaining_qty = current_pos.quantity - sell_qty
+            if remaining_qty == 0:
+                del self.positions[symbol]
+            else:
+                # Average cost basis remains unchanged on partial sales
+                self.positions[symbol] = Position(
+                    symbol=symbol,
+                    quantity=remaining_qty,
+                    avg_price=current_pos.avg_price
+                )
 
-        if remaining_qty == 0:
-            del self.positions[symbol]
-        else:
-            # Average cost basis remains unchanged on partial sales
-            self.positions[symbol] = Position(
-                symbol=symbol,
-                quantity=remaining_qty,
-                avg_price=current_pos.avg_price
-            )
-
-    # 3. Log trade execution
-    self.trade_log.append({
-        "timestamp": timestamp,
-        "symbol": symbol,
-        "quantity": quantity,
-        "fill_price": fill_price,
-        "cash_balance": self.cash,
-    })
-    return True
+        # 3. Log trade execution
+        self.trade_log.append({
+            "timestamp": timestamp,
+            "symbol": symbol,
+            "quantity": quantity,
+            "fill_price": fill_price,
+            "cash_balance": self.cash,
+        })
+        return True
 
 
     def current_equity(self, prices: dict[str, float]) -> float:
