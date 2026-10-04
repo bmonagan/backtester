@@ -53,23 +53,64 @@ class Portfolio:
 
             
 
-    def execute_order(self, timestamp, symbol, quantity, fill_price):
-        """Update cash/positions, append to trade_log."""
-        purchase_amount = quantity * fill_price
-        if purchase_amount > self.cash:
-            print("Not enough cash to make this purchase")
-            return
-        self.cash -= purchase_amount
-        order_position = Position(symbol= symbol, quantity = quantity, avg_price = fill_price)
-        if symbol not in self.positions.keys():
-            self.positions[symbol] = order_position
-        else:
-            old_position = self.positions[symbol]
-            new_quantity = quantity + old_position.quantity
-            new_position_value = (old_position.quantity ^ old_position.avg_price + quantity * fill_price)
-            new_avg_price = new_position_value / new_quantity
-            self.positions[symbol] = Position(symbol=symbol, quantity= new_quantity, avg_price= new_avg_price)
+    def execute_order(self, timestamp, symbol: str, quantity: float, fill_price: float) -> bool:
+    """Update cash/positions, append to trade_log."""
+    if quantity == 0:
+        return False
 
+    trade_cost = quantity * fill_price
+
+    # 1. Buying
+    if quantity > 0:
+        if trade_cost > self.cash:
+            print(f"[{timestamp}] Insufficient funds for {quantity} {symbol} @ {fill_price}")
+            return False
+
+        self.cash -= trade_cost
+
+        if symbol not in self.positions:
+            self.positions[symbol] = Position(symbol=symbol, quantity=quantity, avg_price=fill_price)
+        else:
+            pos = self.positions[symbol]
+            new_qty = pos.quantity + quantity
+            total_basis = (pos.quantity * pos.avg_price) + trade_cost
+            self.positions[symbol] = Position(
+                symbol=symbol,
+                quantity=new_qty,
+                avg_price=total_basis / new_qty
+            )
+
+    # 2. Selling
+    else:
+        sell_qty = abs(quantity)
+        current_pos = self.positions.get(symbol)
+
+        if not current_pos or current_pos.quantity < sell_qty:
+            print(f"[{timestamp}] Cannot sell {sell_qty} {symbol}: insufficient holdings.")
+            return False
+
+        self.cash += sell_qty * fill_price
+        remaining_qty = current_pos.quantity - sell_qty
+
+        if remaining_qty == 0:
+            del self.positions[symbol]
+        else:
+            # Average cost basis remains unchanged on partial sales
+            self.positions[symbol] = Position(
+                symbol=symbol,
+                quantity=remaining_qty,
+                avg_price=current_pos.avg_price
+            )
+
+    # 3. Log trade execution
+    self.trade_log.append({
+        "timestamp": timestamp,
+        "symbol": symbol,
+        "quantity": quantity,
+        "fill_price": fill_price,
+        "cash_balance": self.cash,
+    })
+    return True
 
 
     def current_equity(self, prices: dict[str, float]) -> float:
