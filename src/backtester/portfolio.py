@@ -55,7 +55,22 @@ class Portfolio:
 
     def execute_order(self, timestamp, symbol, quantity, fill_price):
         """Update cash/positions, append to trade_log."""
-        ...
+        purchase_amount = quantity * fill_price
+        if purchase_amount > self.cash:
+            print("Not enough cash to make this purchase")
+            return
+        self.cash -= purchase_amount
+        order_position = Position(symbol= symbol, quantity = quantity, avg_price = fill_price)
+        if symbol not in self.positions.keys():
+            self.positions[symbol] = order_position
+        else:
+            old_position = self.positions[symbol]
+            new_quantity = quantity + old_position.quantity
+            new_position_value = (old_position.quantity ^ old_position.avg_price + quantity * fill_price)
+            new_avg_price = new_position_value / new_quantity
+            self.positions[symbol] = Position(symbol=symbol, quantity= new_quantity, avg_price= new_avg_price)
+
+
 
     def current_equity(self, prices: dict[str, float]) -> float:
         ...
