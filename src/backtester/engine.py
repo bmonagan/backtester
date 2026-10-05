@@ -13,7 +13,7 @@ class BacktestEngine:
             self.history.append(bar)
             
             # Long term for multi ticker testing would need to change how this part operates.  
-            self.portfolio.mark_to_market(bar.timestamp, {self.feed.symbol: bar.close})  # mark BEFORE filling
+            self.portfolio.mark_to_market(bar.timestamp, self.history)  # mark BEFORE filling
 
             order, last_fast, last_slow = self.strategy.on_bar(
                 bar, self.history, self.portfolio, last_fast, last_slow
