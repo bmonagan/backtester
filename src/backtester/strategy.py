@@ -42,19 +42,19 @@ class SmaCrossoverStrategy(Strategy):
         slow_ma = sum(b.close for b in history[-slow_period:]) / slow_period
         
         if (not last_fast and not last_slow):
-            return BarResult(None, fast_ma, slow_ma)
+            return None
+        
         # Golden Cross (Bullish)
         if ((fast_ma > slow_ma) and (last_fast <= last_slow)):
-            #order = Order(bar.symbol, "buy", quantity)
-            order = Order(symbol="AAPL", action="buy", quantity=quantity)
-            return BarResult(order, fast_ma, slow_ma)
+            order = Order(symbol=bar.symbol, action="buy", quantity=quantity)
+            return order
+
         # Death Cross (Bearish)
         if ((fast_ma < slow_ma) and (last_fast >= last_slow)):
-            #order = Order(bar.symbol, "sell", quantity)
-            order = Order(symbol="AAPL", action="sell", quantity=-quantity)
-            return BarResult(order,fast_ma, slow_ma)
+            order = Order(symbol=bar.symbol, action="sell", quantity=-quantity)
+            return order
 
-        return BarResult(None, fast_ma, slow_ma)
+        return None
 
 
 
