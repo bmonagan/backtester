@@ -23,13 +23,28 @@ class Strategy(ABC):
         ...
 
 class SmaCrossoverStrategy(Strategy):
-    def __init__(self):
-        self.last_fast = None
-        self.last_slow = None
-    def on_bar(self, bar, history, portfolio) -> BarResult:
-        fast_period = self.params["fast_window"]
-        slow_period = self.params["slow_window"]
-        quantity = self.params["quantity"]
+    def __init__(self, fast_period: int = 10, slow_period: int = 30, quantity: int = 100):
+        # 1. Validation checks
+        if not isinstance(fast_period, int) or isinstance(fast_period, bool):
+            raise TypeError("fast_period must be an integer")
+        if not isinstance(slow_period, int) or isinstance(slow_period, bool):
+            raise TypeError("slow_period must be an integer")
+        if fast_period <= 0 or slow_period <= 0:
+            raise ValueError("Periods must be greater than 0")
+        if fast_period >= slow_period:
+            raise ValueError(f"fast_period ({fast_period}) must be less than slow_period ({slow_period})")
+
+        # 2. Let the parent class store params
+        super().__init__(fast_period=fast_period, slow_period=slow_period, **params)
+
+        # 3. Strategy-specific state
+        self.fast_period = fast_period
+        self.slow_period = slow_period
+        self.quantity    = quantity
+        self.last_fast   = None
+        self.last_slow   = None
+
+    def on_bar(self, bar, history, portfolio) -> BarResult: 
         if not (fast_period and slow_period and quantity):
             raise ValueError("Must include both fast/slow window parameters and the quantity parameter.")
 
@@ -55,25 +70,3 @@ class SmaCrossoverStrategy(Strategy):
             return order
 
         return None
-
-
-
-
-def validate_periods(fast_period: int, slow_period: int) -> None:
-    # 1. Ensure both are strictly integers (bool is a subclass of int in Python, so exclude it)
-    if not isinstance(fast_period, int) or isinstance(fast_period, bool):
-        raise TypeError(f"fast_period must be an int, got {type(fast_period).__name__}")
-    if not isinstance(slow_period, int) or isinstance(slow_period, bool):
-        raise TypeError(f"slow_period must be an int, got {type(slow_period).__name__}")
-
-    # 2. Check for positive non-zero periods (standard for moving averages)
-    if fast_period <= 0:
-        raise ValueError(f"fast_period must be positive, got {fast_period}")
-    if slow_period <= 0:
-        raise ValueError(f"slow_period must be positive, got {slow_period}")
-
-    # 3. Ensure fast is strictly smaller than slow
-    if fast_period >= slow_period:
-        raise ValueError(
-            f"fast_period ({fast_period}) must be strictly less than slow_period ({slow_period})"
-        )
