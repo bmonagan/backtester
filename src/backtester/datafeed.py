@@ -31,7 +31,7 @@ class DataFeed:
         df = df.loc[self.start:self.end]
         assert not df.empty, "DataFrame is empty"
         return [
-            Bar(timestamp=row.Index, symbol=bar.Symbol, open=row.Open, high=row.High, low=row.Low, close=row.Close, volume=row.Volume)
+            Bar(timestamp=row.Index, symbol=row.Symbol, open=row.Open, high=row.High, low=row.Low, close=row.Close, volume=row.Volume)
             for row in df.itertuples()
         ]
 
