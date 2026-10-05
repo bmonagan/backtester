@@ -44,11 +44,7 @@ class SmaCrossoverStrategy(Strategy):
         self.last_fast   = None
         self.last_slow   = None
 
-    def on_bar(self, bar, history, portfolio) -> BarResult: 
-        if not (fast_period and slow_period and quantity):
-            raise ValueError("Must include both fast/slow window parameters and the quantity parameter.")
-
-        validate_periods(fast_period=fast_period, slow_period=slow_period)
+    def on_bar(self, bar, history, portfolio) -> Order | None: 
         # Check to see if enough data for both SMAS
         if len(history) < slow_period:
             return None
