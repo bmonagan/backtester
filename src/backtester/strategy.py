@@ -32,9 +32,12 @@ class SmaCrossoverStrategy(Strategy):
         quantity = self.params["quantity"]
         if not (fast_period and slow_period and quantity):
             raise ValueError("Must include both fast/slow window parameters and the quantity parameter.")
-        
+
+        validate_periods(fast_period=fast_period, slow_period=slow_period)
+        # Check to see if enough data for both SMAS
         if len(history) < slow_period:
-            return BarResult(None, None, None)
+            return None
+        
         fast_ma = sum(b.close for b in history[-fast_period:]) / fast_period
         slow_ma = sum(b.close for b in history[-slow_period:]) / slow_period
         
@@ -53,3 +56,24 @@ class SmaCrossoverStrategy(Strategy):
 
         return BarResult(None, fast_ma, slow_ma)
 
+
+
+
+def validate_periods(fast_period: int, slow_period: int) -> None:
+    # 1. Ensure both are strictly integers (bool is a subclass of int in Python, so exclude it)
+    if not isinstance(fast_period, int) or isinstance(fast_period, bool):
+        raise TypeError(f"fast_period must be an int, got {type(fast_period).__name__}")
+    if not isinstance(slow_period, int) or isinstance(slow_period, bool):
+        raise TypeError(f"slow_period must be an int, got {type(slow_period).__name__}")
+
+    # 2. Check for positive non-zero periods (standard for moving averages)
+    if fast_period <= 0:
+        raise ValueError(f"fast_period must be positive, got {fast_period}")
+    if slow_period <= 0:
+        raise ValueError(f"slow_period must be positive, got {slow_period}")
+
+    # 3. Ensure fast is strictly smaller than slow
+    if fast_period >= slow_period:
+        raise ValueError(
+            f"fast_period ({fast_period}) must be strictly less than slow_period ({slow_period})"
+        )
