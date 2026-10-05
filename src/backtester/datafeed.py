@@ -7,8 +7,8 @@ import pandas as pd
 
 @dataclass
 class Bar:
-    # May need to add symbol to the bar at some point if i want to do multiple tickers, but not right now.
     timestamp: datetime
+    symbol: string
     open: float
     high: float
     low: float
@@ -17,8 +17,7 @@ class Bar:
 
 
 class DataFeed:
-    def __init__(self, symbol: str, start: datetime, end: datetime, data_source: str):
-        self.symbol = symbol
+    def __init__(self, start: datetime, end: datetime, data_source: str):
         self.start = start
         self.end = end
         self.data_source = data_source
@@ -26,11 +25,13 @@ class DataFeed:
         self._index_by_date = {bar.timestamp: i for i, bar in enumerate(self.bars)}
 
     def _load(self) -> list[Bar]:
+        # Might be worth splitting the functionality across Different data sets
+        # It is possible that they can all just be sorted on loading into DF
         df = pd.read_parquet(self.data_source).sort_index()
         df = df.loc[self.start:self.end]
         assert not df.empty, "DataFrame is empty"
         return [
-            Bar(timestamp=row.Index, open=row.Open, high=row.High, low=row.Low, close=row.Close, volume=row.Volume)
+            Bar(timestamp=row.Index, symbol=bar.Symbol, open=row.Open, high=row.High, low=row.Low, close=row.Close, volume=row.Volume)
             for row in df.itertuples()
         ]
 
