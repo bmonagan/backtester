@@ -6,7 +6,6 @@ class Order(TypedDict):
     symbol: str
     action: str
     quantity: float
-    last_slow: float | None
 
 class Strategy(ABC):
     def __init__(self, **params):
