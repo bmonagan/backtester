@@ -8,8 +8,8 @@ class Order(TypedDict):
     quantity: float
 
 class Strategy(ABC):
-    def __init__(self, **params):
-        self.params = params
+    def __init__(self):
+        pass
 
     @abstractmethod
     def on_bar(self, bar, history: list, portfolio: Portfolio) -> Optional[dict]:
@@ -23,7 +23,7 @@ class Strategy(ABC):
 
 class SmaCrossoverStrategy(Strategy):
     def __init__(self, fast_period: int = 10, slow_period: int = 30, quantity: int = 100):
-        # 1. Validation checks
+        # Validation checks
         if not isinstance(fast_period, int) or isinstance(fast_period, bool):
             raise TypeError("fast_period must be an integer")
         if not isinstance(slow_period, int) or isinstance(slow_period, bool):
@@ -33,10 +33,7 @@ class SmaCrossoverStrategy(Strategy):
         if fast_period >= slow_period:
             raise ValueError(f"fast_period ({fast_period}) must be less than slow_period ({slow_period})")
 
-        # 2. Let the parent class store params
-        super().__init__(fast_period=fast_period, slow_period=slow_period, **params)
-
-        # 3. Strategy-specific state
+        # Strategy-specific state
         self.fast_period = fast_period
         self.slow_period = slow_period
         self.quantity    = quantity
