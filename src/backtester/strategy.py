@@ -42,7 +42,7 @@ class SmaCrossoverStrategy(Strategy):
 
     def on_bar(self, bar, history, portfolio) -> Order | None: 
         # Check to see if enough data for both SMAS
-        if len(history) < slow_period:
+        if len(history) < self.slow_period:
             return None
         
         fast_ma = sum(b.close for b in history[-self.fast_period:]) / self.fast_period
