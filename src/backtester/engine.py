@@ -53,4 +53,4 @@ class BacktestEngine:
             else:
                 # Keep orders for other symbols active until their bar arrives
                 remaining_orders.append(order)
-        self.pending_orders = remaining_order
+        self.pending_orders = remaining_orders
