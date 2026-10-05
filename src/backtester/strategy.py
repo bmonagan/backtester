@@ -6,10 +6,6 @@ class Order(TypedDict):
     symbol: str
     action: str
     quantity: float
-
-class BarResult(NamedTuple):
-    order: Order | None
-    last_fast: float | None
     last_slow: float | None
 
 class Strategy(ABC):
@@ -27,7 +23,10 @@ class Strategy(ABC):
         ...
 
 class SmaCrossoverStrategy(Strategy):
-    def on_bar(self, bar, history, portfolio, last_fast, last_slow) -> BarResult:
+    def __init__(self):
+        self.last_fast = None
+        self.last_slow = None
+    def on_bar(self, bar, history, portfolio) -> BarResult:
         fast_period = self.params["fast_window"]
         slow_period = self.params["slow_window"]
         quantity = self.params["quantity"]
