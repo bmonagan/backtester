@@ -1,5 +1,6 @@
 # portfolio.py
 from dataclasses import dataclass, field
+from datafeed import Bar
 
 @dataclass
 class Position:
@@ -23,20 +24,21 @@ class Portfolio:
         self.trade_log: list[dict] = []
         self.history: list[PortfolioSnapshot] = []
 
-    def mark_to_market(self, timestamp, prices: dict[str, float]):
+    def mark_to_market(self, timestamp, prices: list[Bar]):
         """Record current equity given latest prices."""
         positions_value = 0.0
         total_cost_basis = 0.0
 
-        for ticker,qty in self.positions.items():
-            if qty == 0:
+        for ticker, pos in self.positions.items():
+            if pos.quantity == 0:
                 continue  
-            price = prices.get(ticker)
+            price = prices[-1].close
             if price is None:
                 raise KeyError(f"Missing price for active position in {ticker} at {timestamp}")
 
-            positions_value += qty * price
-            total_cost_basis += qty * self.positions.avg_price
+            positions_value += pos.quantity * price
+            total_cost_basis += pos.quantity * self.positions[ticker].avg_price
+
         
         unrealized_pnl = positions_value - total_cost_basis
         total_equity = self.cash + positions_value
