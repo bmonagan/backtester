@@ -48,7 +48,7 @@ class BacktestEngine:
                     timestamp=current_bar.timestamp,
                     symbol=order["symbol"],
                     quantity=order["quantity"],
-                    price=current_bar.open,
+                    fill_price=current_bar.open,
                 )
             else:
                 # Keep orders for other symbols active until their bar arrives
