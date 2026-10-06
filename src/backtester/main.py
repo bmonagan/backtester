@@ -23,9 +23,10 @@ def main():
     print("Final portfolio:")
     print(engine.portfolio)
     print("Final Equity:")
-    print(engine.portfolio.current_equity(engine.latest_prices))
-    print("Trade Log")
-    print(engine.portfolio.trade_log)
+    print(round(engine.portfolio.current_equity(engine.latest_prices),2))
+    #print("Trade Log")
+    #print(engine.portfolio.trade_log)
+
 
     
      
