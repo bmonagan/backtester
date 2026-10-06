@@ -1,7 +1,8 @@
 import math
 
+import pytest
+
 from portfolio import Portfolio, Position
-from datafeed import Bar
 
 
 def test_initial_state():
@@ -101,8 +102,7 @@ def test_trade_log_records_balance():
 def test_mark_to_market_snapshot():
     p = Portfolio(starting_cash=1000.0)
     p.execute_order(timestamp="t0", symbol="AAPL", quantity=10, fill_price=5.0)
-    bar = Bar(timestamp="t1", symbol="AAPL", open=6.0, high=6.5, low=5.5, close=6.0, volume=1)
-    snap = p.mark_to_market("t1", [bar])
+    snap = p.mark_to_market("t1", {"AAPL": 6.0})
     # holdings_value = 10 * 6.0 ; cost basis = 10 * 5.0
     assert snap.cash == 950.0
     assert math.isclose(snap.holdings_value, 60.0)
@@ -113,8 +113,14 @@ def test_mark_to_market_snapshot():
 
 def test_mark_to_market_flat_when_no_positions():
     p = Portfolio(starting_cash=1000.0)
-    bar = Bar(timestamp="t1", symbol="AAPL", open=6.0, high=6.5, low=5.5, close=6.0, volume=1)
-    snap = p.mark_to_market("t1", [bar])
+    snap = p.mark_to_market("t1", {"AAPL": 6.0})
     assert snap.holdings_value == 0.0
     assert snap.total_equity == 1000.0
     assert snap.unrealized_pnl == 0.0
+
+
+def test_mark_to_market_missing_price_raises():
+    p = Portfolio(starting_cash=1000.0)
+    p.execute_order(timestamp="t0", symbol="AAPL", quantity=10, fill_price=5.0)
+    with pytest.raises(KeyError):
+        p.mark_to_market("t1", {"MSFT": 6.0})

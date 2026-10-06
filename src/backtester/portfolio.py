@@ -24,17 +24,17 @@ class Portfolio:
         self.trade_log: list[dict] = []
         self.history: list[PortfolioSnapshot] = []
 
-    def mark_to_market(self, timestamp, prices: list[Bar]):
-        """Record current equity given latest prices."""
+    def mark_to_market(self, timestamp, prices: dict[str, float]):
+        """Record current equity given latest prices per symbol."""
         positions_value = 0.0
         total_cost_basis = 0.0
 
         for ticker, pos in self.positions.items():
             if pos.quantity == 0:
-                continue  
-            price = prices[-1].close
-            if price is None:
+                continue
+            if ticker not in prices or prices[ticker] is None:
                 raise KeyError(f"Missing price for active position in {ticker} at {timestamp}")
+            price = prices[ticker]
 
             positions_value += pos.quantity * price
             total_cost_basis += pos.quantity * self.positions[ticker].avg_price
