@@ -116,7 +116,13 @@ class Portfolio:
 
 
     def current_equity(self, prices: dict[str, float]) -> float:
-        ...
+        total_equity = 0.0
+        for symb,pos in self.positions.items():
+            pos_val = prices[symb] * pos.quantity
+            total_equity += pos_val
+
+        return total_equity
+
 
     def __str__(self):
         return f"Portfolio: Cash: {self.cash} Positions: {self.positions}"
