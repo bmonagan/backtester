@@ -65,7 +65,7 @@ class Portfolio:
         # 1. Buying
         if quantity > 0:
             if trade_cost > self.cash:
-                print(f"[{timestamp}] Insufficient funds for {quantity} {symbol} @ {fill_price}")
+                #print(f"[{timestamp}] Insufficient funds for {quantity} {symbol} @ {fill_price}")
                 return False
 
             self.cash -= trade_cost
@@ -88,7 +88,7 @@ class Portfolio:
             current_pos = self.positions.get(symbol)
 
             if not current_pos or current_pos.quantity < sell_qty:
-                print(f"[{timestamp}] Cannot sell {sell_qty} {symbol}: insufficient holdings.")
+                #print(f"[{timestamp}] Cannot sell {sell_qty} {symbol}: insufficient holdings.")
                 return False
 
             self.cash += sell_qty * fill_price
