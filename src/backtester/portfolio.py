@@ -8,6 +8,9 @@ class Position:
     quantity: float = 0.0
     avg_price: float = 0.0
 
+    def __repr__(self):
+        return f"Position(symbol='{self.symbol}', quantity={self.quantity}, avg_price={self.avg_price:.2f})"
+
 @dataclass
 class PortfolioSnapshot:
     timestamp: object
@@ -125,4 +128,4 @@ class Portfolio:
 
 
     def __str__(self):
-        return f"Portfolio: Cash: {self.cash} Positions: {self.positions}"
+        return f"Portfolio: Cash: {self.cash:.2f} Positions: {self.positions}"
