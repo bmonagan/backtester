@@ -22,6 +22,10 @@ def main():
     engine.run()
     print("Final portfolio:")
     print(engine.portfolio)
+    print("Final Equity:")
+    print(engine.portfolio.current_equity(engine.latest_prices))
+    print("Trade Log")
+    print(engine.portfolio.trade_log)
 
     
      
