@@ -8,7 +8,7 @@ def main():
     data_source = "data/AAPL_1d.parquet"
     start_day = "2020-01-01"
     end_day = "2024-01-01"
-    starting_cash = 100000.00
+    starting_cash = 1000000.00
     # Strategy Variables 
     fast= 20 
     slow= 50 
