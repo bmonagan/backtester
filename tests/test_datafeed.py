@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from datafeed import DataFeed, Bar
+from backtester.datafeed import DataFeed, Bar
 
 REAL_DATA = "data/AAPL_1d.parquet"
 

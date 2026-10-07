@@ -1,7 +1,7 @@
 import pytest
 
-from datafeed import Bar
-from strategy import BuyAndHoldStrategy, SmaCrossoverStrategy
+from backtester.datafeed import Bar
+from backtester.strategy import BuyAndHoldStrategy, SmaCrossoverStrategy
 
 
 def _bars(closes, symbol="AAPL"):

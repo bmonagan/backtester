@@ -2,10 +2,10 @@
 
 import pytest
 
-from datafeed import Bar
-from engine import BacktestEngine
-from portfolio import Portfolio
-from strategy import SmaCrossoverStrategy
+from backtester.datafeed import Bar
+from backtester.engine import BacktestEngine
+from backtester.portfolio import Portfolio
+from backtester.strategy import SmaCrossoverStrategy
 
 
 def _bars(closes, symbol="AAPL"):

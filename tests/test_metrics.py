@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from metrics import cagr, max_drawdown, sharpe_ratio, win_rate
+from backtester.metrics import cagr, max_drawdown, sharpe_ratio, win_rate
 
 
 def test_sharpe_flat_returns_zero():

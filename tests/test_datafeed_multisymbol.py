@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from datafeed import DataFeed
+from backtester.datafeed import DataFeed
 
 
 def _make_multi(tmp_path):

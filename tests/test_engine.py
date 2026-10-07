@@ -1,7 +1,7 @@
 import pytest
 
-from engine import BacktestEngine
-from datafeed import Bar
+from backtester.engine import BacktestEngine
+from backtester.datafeed import Bar
 
 
 def _bars(symbol="AAPL"):

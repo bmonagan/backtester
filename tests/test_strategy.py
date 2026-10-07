@@ -1,7 +1,7 @@
 import pytest
 
-from strategy import SmaCrossoverStrategy
-from datafeed import Bar
+from backtester.strategy import SmaCrossoverStrategy
+from backtester.datafeed import Bar
 
 
 def _bars(closes, symbol="AAPL"):
