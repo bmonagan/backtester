@@ -1,5 +1,15 @@
 # changelog
 
+## 0.4.0
+
+- `--allow-shorts` CLI flag (single-run and `--compare`) so sell signals can
+  open shorts instead of being rejected.
+- `--order-type {market,limit,stop}` + `--order-price` expose limit/stop
+  mechanics from the CLI via `OrderTypeOverride`, a reusable strategy
+  decorator that stamps one resting order type onto any strategy's orders.
+- Coverage: `pytest-cov` with branch coverage, a 90% CI floor, a committed
+  `docs/coverage.svg` badge (92% today) and a small generator script.
+
 ## 0.3.1
 
 - Hardening pass: `--compare` with no names and `--notional` + `--fraction`
