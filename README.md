@@ -36,6 +36,13 @@ Compare every strategy over the same feed:
 uv run backtester --data data/AAPL_1d.parquet --compare sma,buyhold,rsi,bollinger,donchian --out-csv compare.csv
 ```
 
+Size positions by shares, dollars, or equity fraction:
+
+```bash
+uv run backtester --data data/demo_1d.parquet --strategy sma --notional 10000
+uv run backtester --data data/demo_1d.parquet --strategy buyhold --fraction 0.5
+```
+
 Fetch fresh data:
 
 ```bash
@@ -71,6 +78,10 @@ DataFeed (parquet → Bars) → Strategy.on_bar → BacktestEngine → Portfolio
 - Realized PnL uses FIFO lots net of commission and slippage, for longs and
   shorts; the trade log keeps raw and effective prices side by side. Shorts
   are opt-in via `allow_shorts` and unavailable by default.
+- Orders size by fixed shares (`quantity`), signed dollars (`notional`), or
+  equity fraction (`fraction`: buys deploy off live equity, sells close off
+  position value). Sizing resolves to whole shares at the fill price, and
+  dust under one share counts as rejected.
 - Strategy state is per symbol, so multi-ticker feeds don't leak indicators
   across names.
 
@@ -99,6 +110,7 @@ uv run pytest
 uvx ruff check src tests
 ```
 
-125 tests: strategy signals and validation, long/short accounting, limit
-and stop fills, costs and realized PnL, multi-ticker feeds, engine fills,
-metrics math, demo-data determinism, CLI and comparison harness.
+147 tests: strategy signals and validation, long/short accounting, limit
+and stop fills, notional/fraction sizing, costs and realized PnL,
+multi-ticker feeds, engine fills, metrics math, demo-data determinism,
+CLI and comparison harness.
