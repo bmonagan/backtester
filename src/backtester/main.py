@@ -75,13 +75,19 @@ def strategy_kwargs_for(args, name: str) -> dict:
 
 
 def main(argv=None):
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
 
-    if args.compare:
+    if args.notional is not None and args.fraction is not None:
+        parser.error("--notional and --fraction are mutually exclusive")
+
+    if args.compare is not None:
         names = [n.strip() for n in args.compare.split(",") if n.strip()]
+        if not names:
+            parser.error("--compare needs at least one strategy name")
         bad = [n for n in names if n not in STRATEGIES]
         if bad:
-            raise ValueError(
+            parser.error(
                 f"unknown strategies {bad}, choose from {sorted(STRATEGIES)}"
             )
 

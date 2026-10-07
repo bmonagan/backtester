@@ -69,8 +69,21 @@ def test_compare_writes_csv(tmp_path):
 
 def test_compare_rejects_unknown(tmp_path):
     path = _make_parquet(tmp_path)
-    with pytest.raises(ValueError):
+    with pytest.raises(SystemExit):
         main(["--data", path, "--compare", "nope"])
+
+
+def test_compare_rejects_empty_names(tmp_path):
+    path = _make_parquet(tmp_path)
+    out = str(tmp_path / "empty.csv")
+    with pytest.raises(SystemExit):
+        main(["--data", path, "--compare", ",", "--out-csv", out])
+
+
+def test_conflicting_sizing_flags_rejected(tmp_path):
+    path = _make_parquet(tmp_path)
+    with pytest.raises(SystemExit):
+        main(["--data", path, "--notional", "1000", "--fraction", "0.5"])
 
 
 def test_notional_sizing_runs(tmp_path, capsys):
