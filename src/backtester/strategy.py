@@ -6,7 +6,12 @@ from typing import Any, Literal, NotRequired, Optional, TypedDict
 class Order(TypedDict):
     symbol: str
     action: str
-    quantity: float
+    # Exactly one magnitude key must be set. quantity is share count
+    # (legacy default), notional is signed dollars, fraction sizes off
+    # live equity (buys) or current position value (sells).
+    quantity: NotRequired[float | None]
+    notional: NotRequired[float | None]
+    fraction: NotRequired[float | None]
     order_type: NotRequired[Literal["market", "limit", "stop"]]
     price: NotRequired[float | None]
 
