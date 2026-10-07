@@ -1,5 +1,13 @@
 # changelog
 
+## 0.3.0
+
+- Position sizing: orders carry `quantity` (shares), `notional` (signed
+  dollars) or `fraction` (buys off live equity, sells off position value),
+  resolved to whole shares at the fill price with dust rejection. All five
+  strategies accept the trio, CLI gains `--notional` / `--fraction`, and
+  the default cash is now 100,000 to match the sample comparison.
+
 ## 0.2.0
 
 - Short selling: `Portfolio(allow_shorts=True)` opens negative-quantity
