@@ -1,6 +1,5 @@
 # portfolio.py
 from dataclasses import dataclass, field
-from datafeed import Bar
 
 @dataclass
 class Position:
@@ -54,6 +53,7 @@ class Portfolio:
             unrealized_pnl=unrealized_pnl
         )
         self.history.append(snapshot)
+        self.equity_curve.append((timestamp, total_equity))
         return snapshot
 
             
@@ -119,10 +119,11 @@ class Portfolio:
 
 
     def current_equity(self, prices: dict[str, float]) -> float:
-        total_equity = 0.0
-        for symb,pos in self.positions.items():
-            pos_val = prices[symb] * pos.quantity
-            total_equity += pos_val
+        total_equity = self.cash
+        for symb, pos in self.positions.items():
+            if symb not in prices or prices[symb] is None:
+                raise KeyError(f"Missing price for active position in {symb}")
+            total_equity += prices[symb] * pos.quantity
 
         return total_equity
 
