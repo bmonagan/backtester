@@ -17,6 +17,12 @@ fetch fresh data:
 uv run python scripts/single_ticker_fetch_data.py --symbol AAPL --start 2020-01-01 --end 2024-01-01
 ```
 
+compare strategies over the same feed:
+
+```bash
+PYTHONPATH=src uv run python -m backtester.main --data data/AAPL_1d.parquet --compare sma,buyhold,rsi,bollinger,donchian --out-csv compare.csv
+```
+
 ## layout
 
 - `src/backtester/datafeed.py` — parquet → `Bar` list, single or multi-ticker

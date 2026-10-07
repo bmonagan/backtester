@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from backtester.main import build_parser, main
 
@@ -38,3 +39,26 @@ def test_main_runs_and_writes_csv(tmp_path, capsys):
     with open(out) as f:
         header = f.readline()
     assert "total_equity" in header
+
+
+def test_compare_prints_table(tmp_path, capsys):
+    path = _make_parquet(tmp_path)
+    main(["--data", path, "--start", "2020-01-01", "--end", "2020-12-31", "--cash", "10000", "--compare", "sma,buyhold"])
+    out = capsys.readouterr().out
+    assert "sma" in out and "buyhold" in out
+    assert "sharpe" in out
+
+
+def test_compare_writes_csv(tmp_path):
+    path = _make_parquet(tmp_path)
+    out = str(tmp_path / "compare.csv")
+    main(["--data", path, "--start", "2020-01-01", "--end", "2020-12-31", "--cash", "10000", "--compare", "sma,rsi", "--out-csv", out])
+    with open(out) as f:
+        header = f.readline()
+    assert "strategy" in header and "sharpe" in header
+
+
+def test_compare_rejects_unknown(tmp_path):
+    path = _make_parquet(tmp_path)
+    with pytest.raises(ValueError):
+        main(["--data", path, "--compare", "nope"])
