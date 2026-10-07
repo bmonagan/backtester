@@ -154,3 +154,53 @@ class RsiMomentumStrategy(Strategy):
         if prev >= self.overbought > rsi:
             return Order(symbol=bar.symbol, action="sell", quantity=-self.quantity)
         return None
+
+
+class BollingerMeanReversionStrategy(Strategy):
+    """Buy when close crosses below the lower band, sell the position
+    when close crosses above the upper band. Long-only, one position
+    per symbol at a time."""
+
+    def __init__(self, period: int = 20, num_std: float = 2.0, quantity: int = 100):
+        if isinstance(period, bool) or not isinstance(period, int):
+            raise TypeError("period must be an integer")
+        if period < 2:
+            raise ValueError("period must be at least 2")
+        if isinstance(num_std, bool) or not isinstance(num_std, (int, float)):
+            raise TypeError("num_std must be a number")
+        if num_std <= 0:
+            raise ValueError("num_std must be greater than 0")
+        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)):
+            raise TypeError("quantity must be a number")
+        if quantity <= 0:
+            raise ValueError("quantity must be greater than 0")
+        self.period = period
+        self.num_std = num_std
+        self.quantity = quantity
+        self.in_position: set[str] = set()
+
+    def _bands(self, history) -> tuple[float, float]:
+        closes = [b.close for b in history[-self.period:]]
+        mean = sum(closes) / self.period
+        var = sum((c - mean) ** 2 for c in closes) / self.period
+        width = self.num_std * (var ** 0.5)
+        return mean - width, mean + width
+
+    def on_bar(self, bar, history, portfolio) -> Optional[Order]:
+        if len(history) < self.period + 1:
+            return None
+        prev_lower, prev_upper = self._bands(history[:-1])
+        lower, upper = self._bands(history)
+        prev_close = history[-2].close
+        close = history[-1].close
+
+        if bar.symbol not in self.in_position:
+            if prev_close >= prev_lower and close < lower:
+                self.in_position.add(bar.symbol)
+                return Order(symbol=bar.symbol, action="buy", quantity=self.quantity)
+            return None
+
+        if prev_close <= prev_upper and close > upper:
+            self.in_position.discard(bar.symbol)
+            return Order(symbol=bar.symbol, action="sell", quantity=-self.quantity)
+        return None
