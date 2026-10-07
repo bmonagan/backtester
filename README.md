@@ -10,6 +10,16 @@ one Sharpe/drawdown/CAGR/win-rate table.
 ## results (sample, AAPL daily 2020–2024)
 
 Starting cash 100,000, zero costs. Past performance, not advice.
+
+Reproduce from the committed sample (no network):
+
+```bash
+uv run backtester --data docs/sample-aapl-1d-2020-2024.parquet \
+  --start 2020-01-01 --end 2024-01-01 --cash 100000 \
+  --compare sma,buyhold,rsi,bollinger,donchian \
+  --out-csv docs/compare-aapl-2020-2024.csv
+```
+
 Full rows in [`docs/compare-aapl-2020-2024.csv`](docs/compare-aapl-2020-2024.csv).
 
 | strategy  | final_equity | trades | sharpe | max_drawdown | cagr | win_rate | realized_pnl |
@@ -30,10 +40,11 @@ uv run backtester --help
 uv run backtester --data data/demo_1d.parquet --strategy sma --fast 20 --slow 50
 ```
 
-Compare every strategy over the same feed:
+Compare every strategy over the same feed (committed sample, runs offline):
 
 ```bash
-uv run backtester --data data/AAPL_1d.parquet --compare sma,buyhold,rsi,bollinger,donchian --out-csv compare.csv
+uv run backtester --data docs/sample-aapl-1d-2020-2024.parquet \
+  --compare sma,buyhold,rsi,bollinger,donchian --out-csv compare.csv
 ```
 
 Size positions by shares, dollars, or equity fraction:
