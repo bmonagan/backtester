@@ -5,6 +5,7 @@ from backtester.compare import STRATEGIES, build_strategy, compare, format_table
 from backtester.datafeed import DataFeed
 from backtester.engine import BacktestEngine
 from backtester.metrics import cagr, max_drawdown, sharpe_ratio, win_rate
+from backtester.strategy import OrderTypeOverride
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -28,6 +29,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--donchian-exit", type=int, default=10)
     p.add_argument("--commission", type=float, default=0.0)
     p.add_argument("--slippage-bps", type=float, default=0.0)
+    p.add_argument(
+        "--allow-shorts", action="store_true",
+        help="let sell orders open short positions instead of being rejected",
+    )
+    p.add_argument(
+        "--order-type", choices=["market", "limit", "stop"], default="market",
+        help="resting order type stamped onto every order",
+    )
+    p.add_argument(
+        "--order-price", type=float, default=None,
+        help="resting price for --order-type limit or stop",
+    )
     p.add_argument(
         "--compare", default=None,
         help="comma-separated strategy names, e.g. sma,buyhold,rsi",
@@ -81,6 +94,9 @@ def main(argv=None):
     if args.notional is not None and args.fraction is not None:
         parser.error("--notional and --fraction are mutually exclusive")
 
+    if args.order_type in ("limit", "stop") and args.order_price is None:
+        parser.error(f"--order-type {args.order_type} requires --order-price")
+
     if args.compare is not None:
         names = [n.strip() for n in args.compare.split(",") if n.strip()]
         if not names:
@@ -99,7 +115,8 @@ def main(argv=None):
         rows = compare(
             names, factory, starting_cash=args.cash,
             commission=args.commission, slippage_bps=args.slippage_bps,
-            strategy_kwargs=kwargs,
+            strategy_kwargs=kwargs, allow_shorts=args.allow_shorts,
+            order_type=args.order_type, order_price=args.order_price,
         )
         print(format_table(rows))
         if args.out_csv:
@@ -114,12 +131,15 @@ def main(argv=None):
     strategy = build_strategy(
         args.strategy, **strategy_kwargs_for(args, args.strategy)
     )
+    if args.order_type != "market":
+        strategy = OrderTypeOverride(strategy, args.order_type, args.order_price)
     engine = BacktestEngine(
         feed=feed,
         strategy=strategy,
         starting_cash=args.cash,
         commission=args.commission,
         slippage_bps=args.slippage_bps,
+        allow_shorts=args.allow_shorts,
     )
 
     pf = engine.run()

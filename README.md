@@ -1,6 +1,7 @@
 # backtester
 
 [![pytest](https://github.com/bmonagan/backtester/actions/workflows/pytest.yml/badge.svg)](https://github.com/bmonagan/backtester/actions/workflows/pytest.yml)
+![coverage](./docs/coverage.svg)
 
 Event-driven daily-bar backtester in Python. Five strategies, long and short
 positions, market/limit/stop orders, FIFO PnL with commissions and slippage,
@@ -52,6 +53,20 @@ Size positions by shares, dollars, or equity fraction:
 ```bash
 uv run backtester --data data/demo_1d.parquet --strategy sma --notional 10000
 uv run backtester --data data/demo_1d.parquet --strategy buyhold --fraction 0.5
+```
+
+Let sell signals open shorts (naked sells are rejected by default):
+
+```bash
+uv run backtester --data data/demo_1d.parquet --strategy sma --allow-shorts
+```
+
+Stamp a resting order type onto every order (limit rests until touched,
+stop triggers on touch):
+
+```bash
+uv run backtester --data data/demo_1d.parquet --strategy buyhold \
+  --order-type limit --order-price 90
 ```
 
 Fetch fresh data:
@@ -122,11 +137,18 @@ will be rejected for insufficient funds.
 ## testing
 
 ```bash
-uv run pytest
+uv run pytest --cov --cov-report=term-missing
 uvx ruff check src tests scripts
 ```
 
-157 tests: strategy signals and validation, long/short accounting, limit
+CI enforces a 90% coverage floor. Regenerate the badge after changes:
+
+```bash
+uv run pytest -q --cov
+uv run python scripts/make_coverage_badge.py
+```
+
+174 tests: strategy signals and validation, long/short accounting, limit
 and stop fills, notional/fraction sizing, costs and realized PnL,
 multi-ticker feeds, engine fills, metrics math, demo-data determinism,
 sample/table reproducibility, CLI and comparison harness.

@@ -1,6 +1,6 @@
 # strategy.py
 from abc import ABC, abstractmethod
-from typing import Any, Literal, NotRequired, Optional, TypedDict
+from typing import Any, Literal, NotRequired, Optional, TypedDict, cast
 
 
 class Order(TypedDict):
@@ -69,6 +69,38 @@ class Strategy(ABC):
         for computing indicators.
         """
         ...
+
+
+class OrderTypeOverride(Strategy):
+    """Wrap any strategy and stamp one order type + resting price onto its
+    orders. Applies a single price to every order, so it demos limit/stop
+    mechanics rather than per-order risk logic."""
+
+    def __init__(self, inner: Strategy, order_type: str, price=None):
+        if order_type not in ("market", "limit", "stop"):
+            raise ValueError("order_type must be market, limit or stop")
+        if order_type in ("limit", "stop"):
+            if isinstance(price, bool) or not isinstance(price, (int, float)):
+                raise TypeError("price must be a number for limit/stop orders")
+            if price <= 0:
+                raise ValueError("price must be greater than 0")
+        self.inner = inner
+        self.order_type: Literal["market", "limit", "stop"] = cast(
+            Literal["market", "limit", "stop"], order_type
+        )
+        self.price = price
+
+    def on_bar(self, bar, history, portfolio) -> Optional[Order]:
+        order = self.inner.on_bar(bar, history, portfolio)
+        if order is None:
+            return None
+        stamped = cast(Order, dict(order))
+        stamped["order_type"] = self.order_type
+        if self.order_type == "market":
+            stamped.pop("price", None)
+        else:
+            stamped["price"] = self.price
+        return stamped
 
 class SmaCrossoverStrategy(Strategy):
     def __init__(
