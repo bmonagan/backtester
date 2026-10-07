@@ -105,13 +105,16 @@ class BacktestEngine:
     @staticmethod
     def _resolve_shares(
         order, fill_price: float, equity: float, position_qty: float,
+        cash: float | None = None, commission: float = 0.0,
+        slippage_bps: float = 0.0,
     ) -> float | str:
         """Turn an order's magnitude into signed share count.
 
         Exactly one of quantity / notional / fraction must be set.
-        notional is signed dollars, fraction sizes buys off live equity
-        and sells off current position value. Dust (under one share)
-        returns "reject".
+        notional is signed dollars. fraction sizes buys off live equity
+        and sells off current position value; fraction buys are further
+        capped by available cash so they can never over-commit. Dust
+        (under one share) returns "reject".
         """
         qty = order.get("quantity")
         notional = order.get("notional")
@@ -145,6 +148,11 @@ class BacktestEngine:
             return "reject"
         sign = 1 if action == "buy" else -1
         shares = math.trunc(sign * fraction * base / fill_price)
+        if action == "buy" and cash is not None and shares > 0:
+            eff = fill_price * (1 + slippage_bps / 10000.0)
+            affordable = math.floor((cash - commission) / eff)
+            if affordable < shares:
+                shares = affordable
         return float(shares) if shares != 0 else "reject"
 
     def _fill_pending_orders(self, current_bar: "Bar") -> None:
@@ -168,7 +176,12 @@ class BacktestEngine:
                 equity = self.portfolio.cash
             held = self.portfolio.positions.get(order["symbol"])
             position_qty = held.quantity if held else 0.0
-            shares = self._resolve_shares(order, fill, equity, position_qty)
+            shares = self._resolve_shares(
+                order, fill, equity, position_qty,
+                cash=self.portfolio.cash,
+                commission=self.portfolio.commission,
+                slippage_bps=self.portfolio.slippage_bps,
+            )
             if isinstance(shares, str):
                 self.n_rejected += 1
                 continue

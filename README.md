@@ -66,6 +66,11 @@ DataFeed (parquet → Bars) → Strategy.on_bar → BacktestEngine → Portfolio
   rate from it. `compare` reruns each strategy on a fresh feed so the table
   is apples to apples.
 
+`fraction` is sized per order as a share of live equity (buys) or position
+value (sells), capped by available cash. With several symbols held at once,
+keep `fraction × expected concurrent positions` at or below 1 or later buys
+will be rejected for insufficient funds.
+
 ## engineering decisions
 
 - Fills happen at the next open, never the signaling close — no lookahead.

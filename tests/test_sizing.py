@@ -105,6 +105,37 @@ def test_fraction_without_action_rejected():
     assert BacktestEngine._resolve_shares({"fraction": 0.5}, 100.0, 10000.0, 0.0) == "reject"
 
 
+def test_fraction_buy_capped_by_cash():
+    o = {"action": "buy", "fraction": 1.0}
+    # target 100 shares of equity, but only 2000 cash -> 20 shares
+    assert BacktestEngine._resolve_shares(
+        o, 100.0, 10000.0, 0.0, cash=2000.0
+    ) == 20.0
+
+
+def test_fraction_buy_cap_accounts_for_commission_and_slippage():
+    o = {"action": "buy", "fraction": 1.0}
+    # eff price 101 (100bps), commission 10: floor((2000-10)/101)=19
+    assert BacktestEngine._resolve_shares(
+        o, 100.0, 10000.0, 0.0, cash=2000.0, commission=10.0, slippage_bps=100.0
+    ) == 19.0
+
+
+def test_fraction_buy_cap_never_exceeds_target():
+    o = {"action": "buy", "fraction": 0.1}
+    # plenty of cash: target wins, not capped up
+    assert BacktestEngine._resolve_shares(
+        o, 100.0, 10000.0, 0.0, cash=999999.0
+    ) == 10.0
+
+
+def test_fraction_buy_zero_cash_rejected():
+    o = {"action": "buy", "fraction": 0.5}
+    assert BacktestEngine._resolve_shares(
+        o, 100.0, 10000.0, 0.0, cash=0.0
+    ) == "reject"
+
+
 # --- strategy constructor tests ---
 
 
@@ -210,3 +241,31 @@ def test_sized_strategy_end_to_end_exposure():
     # fills at bar1 open of 101: trunc(0.5 * 10000 / 101) = 49
     assert pos.quantity == 49
     assert pos.quantity * 101.0 / 10000.0 == pytest.approx(0.4949, abs=1e-3)
+
+
+def test_fraction_multisymbol_never_over_commits():
+    bars = [
+        _bar(0, 100.0, symbol="A"), _bar(0, 100.0, symbol="B"),
+        _bar(1, 100.0, symbol="A"), _bar(1, 100.0, symbol="B"),
+        _bar(2, 100.0, symbol="A"), _bar(2, 100.0, symbol="B"),
+    ]
+
+    class BuyBoth:
+        def __init__(self):
+            self.seen = set()
+
+        def on_bar(self, bar, history, portfolio):
+            if bar.symbol in self.seen:
+                return None
+            self.seen.add(bar.symbol)
+            return {"symbol": bar.symbol, "action": "buy", "fraction": 0.9}
+
+    eng = BacktestEngine(feed=bars, strategy=BuyBoth(), starting_cash=10000.0)
+    pf = eng.run()
+    # 90% of equity requested per symbol, but cash caps the second buy
+    assert eng.n_rejected == 0
+    assert set(pf.positions) == {"A", "B"}
+    spent = 10000.0 - pf.cash
+    assert spent <= 10000.0
+    assert pf.positions["A"].quantity == 90
+    assert pf.positions["B"].quantity == 10
