@@ -103,7 +103,9 @@ class BacktestEngine:
         return min(bar.open, trigger) if bar.low <= trigger else None
 
     @staticmethod
-    def _resolve_shares(order, fill_price: float, equity: float, position_qty: float) -> float | str:
+    def _resolve_shares(
+        order, fill_price: float, equity: float, position_qty: float,
+    ) -> float | str:
         """Turn an order's magnitude into signed share count.
 
         Exactly one of quantity / notional / fraction must be set.
