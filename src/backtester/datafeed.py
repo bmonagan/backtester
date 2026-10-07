@@ -104,9 +104,8 @@ class DataFeed:
             if len(getattr(self, "symbols", [])) == 1:
                 symbol = self.symbols[0]
             else:
-                # backward compat: fall back to date-only lookup for single-bar feeds
-                # try any symbol match
-                for (s, d), i in self._index.items():
+                # backward compat: fall back to date-only lookup
+                for (_, d), i in self._index.items():
                     if d == date:
                         return i
                 return None
