@@ -12,11 +12,13 @@ class BacktestEngine:
     def __init__(
         self, feed: Any, strategy: Any, starting_cash: float,
         commission: float = 0.0, slippage_bps: float = 0.0,
+        allow_shorts: bool = False,
     ):
         self.feed = feed
         self.strategy = strategy
         self.portfolio = Portfolio(
-            starting_cash, commission=commission, slippage_bps=slippage_bps
+            starting_cash, commission=commission,
+            slippage_bps=slippage_bps, allow_shorts=allow_shorts,
         )
 
         # History segregated per symbol for clean multi-asset support
@@ -50,22 +52,54 @@ class BacktestEngine:
 
         return self.portfolio
 
+    @staticmethod
+    def _trigger_price(order, bar) -> float | str | None:
+        """Fill price if the order triggers on this bar, else None.
+
+        Market fills at the open. Limits rest until touched and fill at
+        the trigger or better (open gaps through are honored). Stops
+        trigger on touch and fill at the open if it gapped through.
+        """
+        kind = order.get("order_type", "market")
+        qty = order["quantity"]
+        if kind == "market":
+            return bar.open
+        if kind not in ("limit", "stop"):
+            return "reject"
+        trigger = order.get("price")
+        if not isinstance(trigger, (int, float)) or isinstance(trigger, bool):
+            return "reject"
+        if kind == "limit":
+            if qty > 0:
+                return min(bar.open, trigger) if bar.low <= trigger else None
+            return max(bar.open, trigger) if bar.high >= trigger else None
+        if qty > 0:
+            return max(bar.open, trigger) if bar.high >= trigger else None
+        return min(bar.open, trigger) if bar.low <= trigger else None
+
     def _fill_pending_orders(self, current_bar: "Bar") -> None:
         remaining_orders = []
         for order in self.pending_orders:
-            if order["symbol"] == current_bar.symbol:
-                # Fills at current open price without needing peek_next
-                ok = self.portfolio.execute_order(
-                    timestamp=current_bar.timestamp,
-                    symbol=order["symbol"],
-                    quantity=order["quantity"],
-                    fill_price=current_bar.open,
-                )
-                if ok:
-                    self.n_fills += 1
-                else:
-                    self.n_rejected += 1
-            else:
-                # Keep orders for other symbols active until their bar arrives
+            if order["symbol"] != current_bar.symbol:
+                # Keep orders for other symbols until their bar arrives
                 remaining_orders.append(order)
+                continue
+            fill = self._trigger_price(order, current_bar)
+            if isinstance(fill, str):
+                self.n_rejected += 1
+                continue
+            if fill is None:
+                # resting limit/stop, not touched yet
+                remaining_orders.append(order)
+                continue
+            ok = self.portfolio.execute_order(
+                timestamp=current_bar.timestamp,
+                symbol=order["symbol"],
+                quantity=order["quantity"],
+                fill_price=fill,
+            )
+            if ok:
+                self.n_fills += 1
+            else:
+                self.n_rejected += 1
         self.pending_orders = remaining_orders

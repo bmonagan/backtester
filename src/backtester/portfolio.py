@@ -26,7 +26,7 @@ class PortfolioSnapshot:
 class Portfolio:
     def __init__(
         self, starting_cash: float, commission: float = 0.0,
-        slippage_bps: float = 0.0,
+        slippage_bps: float = 0.0, allow_shorts: bool = False,
     ):
         if commission < 0:
             raise ValueError("commission must be >= 0")
@@ -35,13 +35,16 @@ class Portfolio:
         self.cash = starting_cash
         self.commission = commission
         self.slippage_bps = slippage_bps
+        self.allow_shorts = allow_shorts
         self.positions: dict[str, Position] = {}
         self.equity_curve: list[tuple] = []  # (timestamp, equity)
         self.trade_log: list[dict] = []
         self.history: list[PortfolioSnapshot] = []
         self.realized_pnl: float = 0.0
-        # symbol -> [[qty, per_share_basis]]
+        # symbol -> [[qty, per_share_basis]] (long lots, qty > 0)
         self._lots: dict[str, list[list[float]]] = defaultdict(list)
+        # symbol -> [[qty, per_share_credit]] (short lots, qty > 0 shares sold)
+        self._short_lots: dict[str, list[list[float]]] = defaultdict(list)
 
     def _effective_price(
         self, quantity: float, fill_price: float,
@@ -95,69 +98,112 @@ class Portfolio:
 
         comm = self.commission if commission is None else commission
         eff = self._effective_price(quantity, fill_price, slippage_bps)
+        pos = self.positions.get(symbol)
+        pos_qty = pos.quantity if pos else 0.0
 
-        # 1. Buying
+        # 1. Buying (covers shorts first, then opens/extends long)
         if quantity > 0:
-            total_cost = quantity * eff + comm
-            if total_cost > self.cash:
+            if quantity * eff + comm > self.cash:
                 return False
+            realized = 0.0
+            cover_qty = min(quantity, -pos_qty) if pos_qty < 0 else 0.0
+            if cover_qty > 0:
+                comm_cover = comm * cover_qty / quantity
+                cover_cost = cover_qty * eff + comm_cover
+                self.cash -= cover_cost
+                matched = 0.0
+                lots = self._short_lots.get(symbol, [])
+                remaining = cover_qty
+                while remaining > 1e-12 and lots:
+                    lot_qty, lot_px = lots[0]
+                    m = min(lot_qty, remaining)
+                    matched += m * lot_px
+                    lot_qty -= m
+                    remaining -= m
+                    if lot_qty <= 1e-12:
+                        lots.pop(0)
+                    else:
+                        lots[0][0] = lot_qty
+                realized += matched - cover_cost
+                self.realized_pnl += matched - cover_cost
 
-            self.cash -= total_cost
-            per_share = total_cost / quantity
-            self._lots[symbol].append([quantity, per_share])
+            long_qty = quantity - cover_qty
+            if long_qty > 0:
+                comm_long = comm * long_qty / quantity
+                total_cost = long_qty * eff + comm_long
+                self.cash -= total_cost
+                per_share = total_cost / long_qty
+                self._lots[symbol].append([long_qty, per_share])
 
-            if symbol not in self.positions:
+            new_qty = pos_qty + quantity
+            if new_qty == 0:
+                self.positions.pop(symbol, None)
+            elif new_qty > 0:
+                basis = (max(pos_qty, 0.0) * (pos.avg_price if pos else 0.0))
+                if long_qty > 0:
+                    basis += long_qty * eff + comm * long_qty / quantity
                 self.positions[symbol] = Position(
-                    symbol=symbol, quantity=quantity, avg_price=per_share
+                    symbol=symbol, quantity=new_qty,
+                    avg_price=basis / new_qty,
                 )
             else:
-                pos = self.positions[symbol]
-                new_qty = pos.quantity + quantity
-                total_basis = (pos.quantity * pos.avg_price) + total_cost
+                self.positions[symbol] = Position(
+                    symbol=symbol, quantity=new_qty,
+                    avg_price=pos.avg_price if pos else eff,
+                )
+
+        # 2. Selling (closes longs first, then opens/extends short)
+        else:
+            sell_qty = abs(quantity)
+            close_qty = min(sell_qty, pos_qty) if pos_qty > 0 else 0.0
+            short_qty = sell_qty - close_qty
+            if short_qty > 0 and not self.allow_shorts:
+                return False
+
+            realized = 0.0
+            if close_qty > 0:
+                comm_close = comm * close_qty / sell_qty
+                proceeds = close_qty * eff - comm_close
+                self.cash += proceeds
+                remaining = close_qty
+                cost = 0.0
+                lots = self._lots.get(symbol, [])
+                while remaining > 1e-12 and lots:
+                    lot_qty, lot_px = lots[0]
+                    m = min(lot_qty, remaining)
+                    cost += m * lot_px
+                    lot_qty -= m
+                    remaining -= m
+                    if lot_qty <= 1e-12:
+                        lots.pop(0)
+                    else:
+                        lots[0][0] = lot_qty
+                realized += proceeds - cost
+                self.realized_pnl += proceeds - cost
+
+            if short_qty > 0:
+                comm_short = comm * short_qty / sell_qty
+                credit = short_qty * eff - comm_short
+                self.cash += credit
+                per_share = credit / short_qty
+                self._short_lots[symbol].append([short_qty, per_share])
+
+            new_qty = pos_qty - sell_qty
+            if new_qty == 0:
+                self.positions.pop(symbol, None)
+            elif new_qty > 0:
                 self.positions[symbol] = Position(
                     symbol=symbol,
                     quantity=new_qty,
-                    avg_price=total_basis / new_qty
+                    avg_price=pos.avg_price if pos else eff,
                 )
-            realized = 0.0
-
-        # 2. Selling
-        else:
-            sell_qty = abs(quantity)
-            current_pos = self.positions.get(symbol)
-
-            if not current_pos or current_pos.quantity < sell_qty:
-                return False
-
-            proceeds = sell_qty * eff - comm
-            self.cash += proceeds
-
-            # FIFO realized pnl against lots
-            remaining = sell_qty
-            cost = 0.0
-            lots = self._lots.get(symbol, [])
-            while remaining > 1e-12 and lots:
-                lot_qty, lot_px = lots[0]
-                m = min(lot_qty, remaining)
-                cost += m * lot_px
-                lot_qty -= m
-                remaining -= m
-                if lot_qty <= 1e-12:
-                    lots.pop(0)
-                else:
-                    lots[0][0] = lot_qty
-            realized = proceeds - cost
-            self.realized_pnl += realized
-
-            remaining_qty = current_pos.quantity - sell_qty
-            if remaining_qty == 0:
-                del self.positions[symbol]
             else:
-                # Average cost basis remains unchanged on partial sales
+                short_basis = (-min(pos_qty, 0.0)) * (pos.avg_price if pos else 0.0)
+                if short_qty > 0:
+                    short_basis += short_qty * eff - comm * short_qty / sell_qty
                 self.positions[symbol] = Position(
-                    symbol=symbol,
-                    quantity=remaining_qty,
-                    avg_price=current_pos.avg_price
+                    symbol=symbol, quantity=new_qty,
+                    avg_price=short_basis / abs(new_qty),
                 )
 
         # 3. Log trade execution

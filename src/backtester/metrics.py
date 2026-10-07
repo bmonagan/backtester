@@ -101,14 +101,17 @@ def cagr(equity_curve, periods_per_year=252) -> float:
 
 
 def win_rate(trade_log) -> float:
-    """Fraction of closed sell executions that were profitable (0.0 - 1.0).
+    """Fraction of closing executions that were profitable (0.0 - 1.0).
 
-    Uses FIFO matching of buys to sells per symbol. Each sell execution
-    counts as one closed trade. Returns 0.0 when there are no closed trades.
+    Uses FIFO matching per symbol on raw fill prices (pre-cost signal
+    quality). Buys close open shorts first, sells close open longs first;
+    each execution that closes something counts as one trade. Returns 0.0
+    when there are no closed trades.
     """
     if not trade_log:
         return 0.0
-    buys: dict[str, list[list[float]]] = defaultdict(list)  # symbol -> [[qty, price]]
+    longs: dict[str, list[list[float]]] = defaultdict(list)
+    shorts: dict[str, list[list[float]]] = defaultdict(list)
     closed_pnls: list[float] = []
 
     for t in trade_log:
@@ -125,26 +128,43 @@ def win_rate(trade_log) -> float:
         qty = float(qty)
         price = float(price)
         if qty > 0:
-            buys[symbol].append([qty, price])
-        elif qty < 0:
-            sell_qty = -qty
-            pnl = 0.0
-            matched_any = False
-            queue = buys.get(symbol, [])
-            while sell_qty > 1e-12 and queue:
-                buy_qty, buy_price = queue[0]
-                m = min(buy_qty, sell_qty)
-                pnl += (price - buy_price) * m
-                buy_qty -= m
-                sell_qty -= m
-                matched_any = True
-                if buy_qty <= 1e-12:
+            # cover shorts first, remainder opens long
+            remaining, pnl, matched = qty, 0.0, False
+            queue = shorts.get(symbol, [])
+            while remaining > 1e-12 and queue:
+                lot_qty, lot_px = queue[0]
+                m = min(lot_qty, remaining)
+                pnl += (lot_px - price) * m
+                lot_qty -= m
+                remaining -= m
+                matched = True
+                if lot_qty <= 1e-12:
                     queue.pop(0)
                 else:
-                    queue[0][0] = buy_qty
-            # Only count sells that matched prior buys; ignore naked shorts
-            if matched_any:
+                    queue[0][0] = lot_qty
+            if matched:
                 closed_pnls.append(pnl)
+            if remaining > 1e-12:
+                longs[symbol].append([remaining, price])
+        elif qty < 0:
+            # close longs first, remainder opens short
+            remaining, pnl, matched = -qty, 0.0, False
+            queue = longs.get(symbol, [])
+            while remaining > 1e-12 and queue:
+                lot_qty, lot_px = queue[0]
+                m = min(lot_qty, remaining)
+                pnl += (price - lot_px) * m
+                lot_qty -= m
+                remaining -= m
+                matched = True
+                if lot_qty <= 1e-12:
+                    queue.pop(0)
+                else:
+                    queue[0][0] = lot_qty
+            if matched:
+                closed_pnls.append(pnl)
+            if remaining > 1e-12:
+                shorts[symbol].append([remaining, price])
 
     if not closed_pnls:
         return 0.0

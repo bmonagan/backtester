@@ -1,12 +1,14 @@
 # strategy.py
 from abc import ABC, abstractmethod
-from typing import Any, Optional, TypedDict
+from typing import Any, Literal, NotRequired, Optional, TypedDict
 
 
 class Order(TypedDict):
     symbol: str
     action: str
     quantity: float
+    order_type: NotRequired[Literal["market", "limit", "stop"]]
+    price: NotRequired[float | None]
 
 class Strategy(ABC):
     def __init__(self):

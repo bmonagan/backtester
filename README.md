@@ -2,9 +2,10 @@
 
 [![pytest](https://github.com/bmonagan/backtester/actions/workflows/pytest.yml/badge.svg)](https://github.com/bmonagan/backtester/actions/workflows/pytest.yml)
 
-Event-driven daily-bar backtester in Python. Five strategies, FIFO PnL with
-commissions and slippage, and a comparison harness that runs every strategy
-over identical feeds into one Sharpe/drawdown/CAGR/win-rate table.
+Event-driven daily-bar backtester in Python. Five strategies, long and short
+positions, market/limit/stop orders, FIFO PnL with commissions and slippage,
+and a comparison harness that runs every strategy over identical feeds into
+one Sharpe/drawdown/CAGR/win-rate table.
 
 ## results (sample, AAPL daily 2020–2024)
 
@@ -24,8 +25,9 @@ Full rows in [`docs/compare-aapl-2020-2024.csv`](docs/compare-aapl-2020-2024.csv
 ```bash
 uv sync
 uv run pytest
+uv run python scripts/make_demo_data.py
 uv run backtester --help
-uv run backtester --data data/AAPL_1d.parquet --strategy sma --fast 20 --slow 50
+uv run backtester --data data/demo_1d.parquet --strategy sma --fast 20 --slow 50
 ```
 
 Compare every strategy over the same feed:
@@ -60,19 +62,25 @@ DataFeed (parquet → Bars) → Strategy.on_bar → BacktestEngine → Portfolio
 ## engineering decisions
 
 - Fills happen at the next open, never the signaling close — no lookahead.
+- Market orders fill at the open. Limit orders rest until touched and fill
+  at the trigger or better (gaps through fill at the open). Stop orders
+  trigger on touch and fill at the open when gapped through. Untriggered
+  orders rest good-till-cancel; malformed ones count as rejected.
 - Signals fire once per cross/break; strategy state always advances, so a
   persistent crossover can't emit a buy every bar.
-- Realized PnL uses FIFO lots net of commission and slippage; the trade log
-  keeps raw and effective prices side by side.
+- Realized PnL uses FIFO lots net of commission and slippage, for longs and
+  shorts; the trade log keeps raw and effective prices side by side. Shorts
+  are opt-in via `allow_shorts` and unavailable by default.
 - Strategy state is per symbol, so multi-ticker feeds don't leak indicators
   across names.
 
 ## limitations
 
-- Long-only, daily bars, market orders at the open. No intraday, no shorting,
-  no stop/limit order types yet.
-- The sample parquet is git-ignored; tests needing it skip in CI. Bring your
-  own data via the fetch script.
+- Daily bars. No intraday, no partial intrabar sequencing beyond OHLC
+  trigger checks, no margin calls on shorts.
+- The sample parquet is git-ignored; tests needing it skip in CI. Run
+  `scripts/make_demo_data.py` for an offline demo or bring your own data
+  via the fetch script.
 
 ## layout
 
@@ -82,7 +90,7 @@ DataFeed (parquet → Bars) → Strategy.on_bar → BacktestEngine → Portfolio
 - `src/backtester/portfolio.py` — cash, positions, commission/slippage, FIFO PnL
 - `src/backtester/metrics.py` — sharpe, max drawdown, cagr, win rate
 - `src/backtester/compare.py` — multi-strategy comparison table
-- `scripts/` — yfinance fetch helpers
+- `scripts/` — yfinance fetch and deterministic demo-data helpers
 
 ## testing
 
@@ -91,6 +99,6 @@ uv run pytest
 uvx ruff check src tests
 ```
 
-95 tests: strategy signals and validation, portfolio accounting, costs and
-realized PnL, multi-ticker feeds, engine fills, metrics math, CLI and
-comparison harness.
+125 tests: strategy signals and validation, long/short accounting, limit
+and stop fills, costs and realized PnL, multi-ticker feeds, engine fills,
+metrics math, demo-data determinism, CLI and comparison harness.
