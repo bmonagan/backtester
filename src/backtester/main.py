@@ -12,11 +12,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--data", default="data/AAPL_1d.parquet")
     p.add_argument("--start", default="2020-01-01")
     p.add_argument("--end", default="2024-01-01")
-    p.add_argument("--cash", type=float, default=1000000.0)
+    p.add_argument("--cash", type=float, default=100000.0)
     p.add_argument("--strategy", choices=sorted(STRATEGIES), default="sma")
     p.add_argument("--fast", type=int, default=20)
     p.add_argument("--slow", type=int, default=50)
     p.add_argument("--quantity", type=float, default=100)
+    p.add_argument("--notional", type=float, default=None)
+    p.add_argument("--fraction", type=float, default=None)
     p.add_argument("--rsi-period", type=int, default=14)
     p.add_argument("--oversold", type=float, default=30)
     p.add_argument("--overbought", type=float, default=70)
@@ -34,33 +36,42 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def sizing_kwargs_for(args) -> dict:
+    if args.notional is not None:
+        return {"notional": args.notional}
+    if args.fraction is not None:
+        return {"fraction": args.fraction}
+    return {"quantity": args.quantity}
+
+
 def strategy_kwargs_for(args, name: str) -> dict:
+    sizing = sizing_kwargs_for(args)
     if name == "sma":
         return {
             "fast_period": args.fast,
             "slow_period": args.slow,
-            "quantity": args.quantity,
+            **sizing,
         }
     if name == "rsi":
         return {
             "period": args.rsi_period,
             "oversold": args.oversold,
             "overbought": args.overbought,
-            "quantity": args.quantity,
+            **sizing,
         }
     if name == "bollinger":
         return {
             "period": args.bb_period,
             "num_std": args.bb_std,
-            "quantity": args.quantity,
+            **sizing,
         }
     if name == "donchian":
         return {
             "entry_period": args.donchian_entry,
             "exit_period": args.donchian_exit,
-            "quantity": args.quantity,
+            **sizing,
         }
-    return {"quantity": args.quantity}
+    return dict(sizing)
 
 
 def main(argv=None):

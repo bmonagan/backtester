@@ -1,12 +1,60 @@
 # strategy.py
 from abc import ABC, abstractmethod
-from typing import Any, Optional, TypedDict
+from typing import Any, Literal, NotRequired, Optional, TypedDict
 
 
 class Order(TypedDict):
     symbol: str
     action: str
-    quantity: float
+    # Exactly one magnitude key must be set. quantity is share count
+    # (legacy default), notional is signed dollars, fraction sizes off
+    # live equity (buys) or current position value (sells).
+    quantity: NotRequired[float | None]
+    notional: NotRequired[float | None]
+    fraction: NotRequired[float | None]
+    order_type: NotRequired[Literal["market", "limit", "stop"]]
+    price: NotRequired[float | None]
+
+
+def _validate_sizing(quantity=None, notional=None, fraction=None) -> dict:
+    """Exactly one magnitude; unset means the legacy 100-share default."""
+    given = [
+        k for k, v in
+        (("quantity", quantity), ("notional", notional), ("fraction", fraction))
+        if v is not None
+    ]
+    if len(given) > 1:
+        raise ValueError(
+            f"only one of quantity, notional, fraction may be set, got {given}"
+        )
+    if notional is not None:
+        if isinstance(notional, bool) or not isinstance(notional, (int, float)):
+            raise TypeError("notional must be a number")
+        if notional <= 0:
+            raise ValueError("notional must be greater than 0")
+        return {"notional": notional}
+    if fraction is not None:
+        if isinstance(fraction, bool) or not isinstance(fraction, (int, float)):
+            raise TypeError("fraction must be a number")
+        if not 0 < fraction <= 1:
+            raise ValueError("fraction must be in (0, 1]")
+        return {"fraction": fraction}
+    q = 100 if quantity is None else quantity
+    if isinstance(q, bool) or not isinstance(q, (int, float)):
+        raise TypeError("quantity must be a number")
+    if q <= 0:
+        raise ValueError("quantity must be greater than 0")
+    return {"quantity": q}
+
+
+def _sized_order(sizing: dict, symbol: str, action: str) -> Order:
+    if "quantity" in sizing:
+        q = sizing["quantity"]
+        return Order(symbol=symbol, action=action, quantity=q if action == "buy" else -q)
+    if "notional" in sizing:
+        n = sizing["notional"]
+        return Order(symbol=symbol, action=action, notional=n if action == "buy" else -n)
+    return Order(symbol=symbol, action=action, fraction=sizing["fraction"])
 
 class Strategy(ABC):
     def __init__(self):
@@ -23,7 +71,10 @@ class Strategy(ABC):
         ...
 
 class SmaCrossoverStrategy(Strategy):
-    def __init__(self, fast_period: int = 10, slow_period: int = 30, quantity: int = 100):
+    def __init__(
+        self, fast_period: int = 10, slow_period: int = 30,
+        quantity=None, notional=None, fraction=None,
+    ):
         # Validation checks
         if not isinstance(fast_period, int) or isinstance(fast_period, bool):
             raise TypeError("fast_period must be an integer")
@@ -37,15 +88,10 @@ class SmaCrossoverStrategy(Strategy):
                 f"slow_period ({slow_period})"
             )
 
-        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)):
-            raise TypeError("quantity must be a number")
-        if quantity <= 0:
-            raise ValueError("quantity must be greater than 0")
-
         # Strategy-specific state
         self.fast_period = fast_period
         self.slow_period = slow_period
-        self.quantity    = quantity
+        self.sizing = _validate_sizing(quantity, notional, fraction)
         self.last_fast   = None
         self.last_slow   = None
 
@@ -72,28 +118,24 @@ class SmaCrossoverStrategy(Strategy):
         self.last_slow = slow_ma
 
         if is_golden:
-            return Order(symbol=bar.symbol, action="buy", quantity=self.quantity)
+            return _sized_order(self.sizing, bar.symbol, "buy")
 
         if is_death:
-            return Order(symbol=bar.symbol, action="sell", quantity=-self.quantity)
+            return _sized_order(self.sizing, bar.symbol, "sell")
 
         return None
 
 
 class BuyAndHoldStrategy(Strategy):
-    def __init__(self, quantity: int = 100):
-        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)):
-            raise TypeError("quantity must be a number")
-        if quantity <= 0:
-            raise ValueError("quantity must be greater than 0")
-        self.quantity = quantity
+    def __init__(self, quantity=None, notional=None, fraction=None):
+        self.sizing = _validate_sizing(quantity, notional, fraction)
         self.bought: set[str] = set()
 
     def on_bar(self, bar, history, portfolio) -> Optional[Order]:
         if bar.symbol in self.bought:
             return None
         self.bought.add(bar.symbol)
-        return Order(symbol=bar.symbol, action="buy", quantity=self.quantity)
+        return _sized_order(self.sizing, bar.symbol, "buy")
 
 
 class RsiMomentumStrategy(Strategy):
@@ -102,7 +144,8 @@ class RsiMomentumStrategy(Strategy):
 
     def __init__(
         self, period: int = 14, oversold: float = 30,
-        overbought: float = 70, quantity: int = 100,
+        overbought: float = 70, quantity=None, notional=None,
+        fraction=None,
     ):
         if isinstance(period, bool) or not isinstance(period, int):
             raise TypeError("period must be an integer")
@@ -113,14 +156,10 @@ class RsiMomentumStrategy(Strategy):
                 raise TypeError(f"{name} must be a number")
         if not 0 < oversold < overbought < 100:
             raise ValueError("require 0 < oversold < overbought < 100")
-        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)):
-            raise TypeError("quantity must be a number")
-        if quantity <= 0:
-            raise ValueError("quantity must be greater than 0")
         self.period = period
         self.oversold = oversold
         self.overbought = overbought
-        self.quantity = quantity
+        self.sizing = _validate_sizing(quantity, notional, fraction)
         self._state: dict[str, dict] = {}
 
     @staticmethod
@@ -157,9 +196,9 @@ class RsiMomentumStrategy(Strategy):
         st["prev_rsi"] = rsi
 
         if prev <= self.oversold < rsi:
-            return Order(symbol=bar.symbol, action="buy", quantity=self.quantity)
+            return _sized_order(self.sizing, bar.symbol, "buy")
         if prev >= self.overbought > rsi:
-            return Order(symbol=bar.symbol, action="sell", quantity=-self.quantity)
+            return _sized_order(self.sizing, bar.symbol, "sell")
         return None
 
 
@@ -168,7 +207,10 @@ class BollingerMeanReversionStrategy(Strategy):
     when close crosses above the upper band. Long-only, one position
     per symbol at a time."""
 
-    def __init__(self, period: int = 20, num_std: float = 2.0, quantity: int = 100):
+    def __init__(
+        self, period: int = 20, num_std: float = 2.0, quantity=None,
+        notional=None, fraction=None,
+    ):
         if isinstance(period, bool) or not isinstance(period, int):
             raise TypeError("period must be an integer")
         if period < 2:
@@ -177,13 +219,9 @@ class BollingerMeanReversionStrategy(Strategy):
             raise TypeError("num_std must be a number")
         if num_std <= 0:
             raise ValueError("num_std must be greater than 0")
-        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)):
-            raise TypeError("quantity must be a number")
-        if quantity <= 0:
-            raise ValueError("quantity must be greater than 0")
         self.period = period
         self.num_std = num_std
-        self.quantity = quantity
+        self.sizing = _validate_sizing(quantity, notional, fraction)
         self.in_position: set[str] = set()
 
     def _bands(self, history) -> tuple[float, float]:
@@ -204,12 +242,12 @@ class BollingerMeanReversionStrategy(Strategy):
         if bar.symbol not in self.in_position:
             if prev_close >= prev_lower and close < lower:
                 self.in_position.add(bar.symbol)
-                return Order(symbol=bar.symbol, action="buy", quantity=self.quantity)
+                return _sized_order(self.sizing, bar.symbol, "buy")
             return None
 
         if prev_close <= prev_upper and close > upper:
             self.in_position.discard(bar.symbol)
-            return Order(symbol=bar.symbol, action="sell", quantity=-self.quantity)
+            return _sized_order(self.sizing, bar.symbol, "sell")
         return None
 
 
@@ -218,7 +256,10 @@ class DonchianBreakoutStrategy(Strategy):
     sell on close below the prior exit_period lowest low.
     Long-only, one position per symbol at a time."""
 
-    def __init__(self, entry_period: int = 20, exit_period: int = 10, quantity: int = 100):
+    def __init__(
+        self, entry_period: int = 20, exit_period: int = 10,
+        quantity=None, notional=None, fraction=None,
+    ):
         for name, val in (("entry_period", entry_period), ("exit_period", exit_period)):
             if isinstance(val, bool) or not isinstance(val, int):
                 raise TypeError(f"{name} must be an integer")
@@ -229,13 +270,9 @@ class DonchianBreakoutStrategy(Strategy):
                 f"exit_period ({exit_period}) must be less than "
                 f"entry_period ({entry_period})"
             )
-        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)):
-            raise TypeError("quantity must be a number")
-        if quantity <= 0:
-            raise ValueError("quantity must be greater than 0")
         self.entry_period = entry_period
         self.exit_period = exit_period
-        self.quantity = quantity
+        self.sizing = _validate_sizing(quantity, notional, fraction)
         self.in_position: set[str] = set()
 
     def on_bar(self, bar, history, portfolio) -> Optional[Order]:
@@ -250,10 +287,10 @@ class DonchianBreakoutStrategy(Strategy):
         if bar.symbol not in self.in_position:
             if close > highest:
                 self.in_position.add(bar.symbol)
-                return Order(symbol=bar.symbol, action="buy", quantity=self.quantity)
+                return _sized_order(self.sizing, bar.symbol, "buy")
             return None
 
         if close < lowest:
             self.in_position.discard(bar.symbol)
-            return Order(symbol=bar.symbol, action="sell", quantity=-self.quantity)
+            return _sized_order(self.sizing, bar.symbol, "sell")
         return None

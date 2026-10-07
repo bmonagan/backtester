@@ -26,7 +26,9 @@ def _make_parquet(tmp_path):
 def test_parser_defaults():
     args = build_parser().parse_args([])
     assert args.strategy == "sma"
-    assert args.cash == 1000000.0
+    assert args.cash == 100000.0
+    assert args.notional is None
+    assert args.fraction is None
 
 
 def _run_args(path, *extra):
@@ -69,3 +71,15 @@ def test_compare_rejects_unknown(tmp_path):
     path = _make_parquet(tmp_path)
     with pytest.raises(ValueError):
         main(["--data", path, "--compare", "nope"])
+
+
+def test_notional_sizing_runs(tmp_path, capsys):
+    path = _make_parquet(tmp_path)
+    main(_run_args(path, "--notional", "5000"))
+    assert "Final equity" in capsys.readouterr().out
+
+
+def test_fraction_sizing_runs(tmp_path, capsys):
+    path = _make_parquet(tmp_path)
+    main(_run_args(path, "--strategy", "buyhold", "--fraction", "0.5"))
+    assert "Final equity" in capsys.readouterr().out
