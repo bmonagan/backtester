@@ -8,4 +8,4 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv sync
       - run: uv run pytest -q
-      - run: uvx ruff check src tests || true
+      - run: uvx ruff check src tests
