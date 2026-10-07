@@ -36,7 +36,10 @@ htmlcov/
 # Data / cache (project-specific — cached OHLCV data shouldn't be committed)
 data/cache/*
 !data/cache/.gitkeep
-/data 
+/data/
+
+# JS leftovers
+node_modules/
 
 # Logs
 *.log

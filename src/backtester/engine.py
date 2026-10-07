@@ -1,19 +1,30 @@
 # engine.py
 from collections import defaultdict
-from typing import Dict, List, Optional
-from portfolio import Portfolio
+from typing import TYPE_CHECKING, Any, Dict, List
+
+from backtester.portfolio import Portfolio
+
+if TYPE_CHECKING:
+    from backtester.datafeed import Bar
 
 
 class BacktestEngine:
-    def __init__(self, feed: "DataFeed", strategy: "Strategy", starting_cash: float):
+    def __init__(
+        self, feed: Any, strategy: Any, starting_cash: float,
+        commission: float = 0.0, slippage_bps: float = 0.0,
+    ):
         self.feed = feed
         self.strategy = strategy
-        self.portfolio = Portfolio(starting_cash)
-        
+        self.portfolio = Portfolio(
+            starting_cash, commission=commission, slippage_bps=slippage_bps
+        )
+
         # History segregated per symbol for clean multi-asset support
         self.history: Dict[str, List["Bar"]] = defaultdict(list)
         self.latest_prices: Dict[str, float] = {}
-        self.pending_orders: List[dict] = []
+        self.pending_orders: List[Any] = []
+        self.n_fills: int = 0
+        self.n_rejected: int = 0
 
     def run(self) -> Portfolio:
         for bar in self.feed:
@@ -33,7 +44,7 @@ class BacktestEngine:
                 history=self.history[bar.symbol],
                 portfolio=self.portfolio
             )
-            
+
             if order:
                 self.pending_orders.append(order)
 
@@ -44,12 +55,16 @@ class BacktestEngine:
         for order in self.pending_orders:
             if order["symbol"] == current_bar.symbol:
                 # Fills at current open price without needing peek_next
-                self.portfolio.execute_order(
+                ok = self.portfolio.execute_order(
                     timestamp=current_bar.timestamp,
                     symbol=order["symbol"],
                     quantity=order["quantity"],
                     fill_price=current_bar.open,
                 )
+                if ok:
+                    self.n_fills += 1
+                else:
+                    self.n_rejected += 1
             else:
                 # Keep orders for other symbols active until their bar arrives
                 remaining_orders.append(order)

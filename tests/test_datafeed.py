@@ -1,9 +1,14 @@
+import os
+
 import pandas as pd
 import pytest
 
-from datafeed import DataFeed, Bar
+from backtester.datafeed import Bar, DataFeed
 
 REAL_DATA = "data/AAPL_1d.parquet"
+needs_real_data = pytest.mark.skipif(
+    not os.path.exists(REAL_DATA), reason="sample parquet not committed"
+)
 
 
 def _make_parquet(tmp_path, closes=(10.0, 11.0, 12.0)):
@@ -44,7 +49,7 @@ def test_start_end_filtering(tmp_path):
 
 def test_empty_slice_raises(tmp_path):
     path = _make_parquet(tmp_path)
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         DataFeed(start="2030-01-01", end="2030-12-31", data_source=path)
 
 
@@ -63,6 +68,7 @@ def test_get_index_peek_next_contains_iter(tmp_path):
     assert [b.close for b in feed] == pytest.approx([10.0, 11.0, 12.0])
 
 
+@needs_real_data
 def test_real_parquet_loads():
     feed = DataFeed(start="2020-01-01", end="2020-01-31", data_source=REAL_DATA)
     assert len(feed) > 0

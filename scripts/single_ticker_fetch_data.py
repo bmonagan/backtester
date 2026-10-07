@@ -1,26 +1,37 @@
+import argparse
 import pandas as pd
 import yfinance as yf
 
-symbol = "AAPL"
 
-# import data
-df = yf.download(symbol, start="2020-01-01", end="2024-01-01", interval="1d")
+def fetch(symbol: str, start: str, end: str, interval: str, out: str | None = None) -> str:
+    df = yf.download(symbol, start=start, end=end, interval=interval)
 
-# flatten columns: single ticker, so the Ticker level is redundant
-df.columns = df.columns.droplevel("Ticker")   # -> Close, High, Low, Open, Volume
+    # flatten multi-index columns for single ticker
+    if hasattr(df.columns, "droplevel"):
+        try:
+            df.columns = df.columns.droplevel("Ticker")
+        except (KeyError, ValueError):
+            pass
 
-# --- ADD SYMBOL HERE ---
-df["Symbol"] = symbol
+    df["Symbol"] = symbol
 
-# sanity checks
-print(df.isna().sum())                     # missing values
-assert df.index.is_monotonic_increasing    # sorted by time
-assert not df.index.duplicated().any()     # no duplicate dates
-assert (df["High"] >= df["Low"]).all()     # basic OHLC consistency
+    print(df.isna().sum())
+    assert df.index.is_monotonic_increasing
+    assert not df.index.duplicated().any()
+    assert (df["High"] >= df["Low"]).all()
 
-# save to parquet
-df.to_parquet(f"data/{symbol}_1d.parquet")
+    out = out or f"data/{symbol}_1d.parquet"
+    df.to_parquet(out)
+    print(df.head())
+    return out
 
-# load back (also note fixing the typo ".paquet" -> ".parquet")
-df = pd.read_parquet(f"data/{symbol}_1d.parquet")
-print(df.head())
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+    p.add_argument("--symbol", default="AAPL")
+    p.add_argument("--start", default="2020-01-01")
+    p.add_argument("--end", default="2024-01-01")
+    p.add_argument("--interval", default="1d")
+    p.add_argument("--out", default=None)
+    args = p.parse_args()
+    fetch(args.symbol, args.start, args.end, args.interval, args.out)
