@@ -33,6 +33,11 @@ class SmaCrossoverStrategy(Strategy):
         if fast_period >= slow_period:
             raise ValueError(f"fast_period ({fast_period}) must be less than slow_period ({slow_period})")
 
+        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)):
+            raise TypeError("quantity must be a number")
+        if quantity <= 0:
+            raise ValueError("quantity must be greater than 0")
+
         # Strategy-specific state
         self.fast_period = fast_period
         self.slow_period = slow_period
@@ -69,3 +74,19 @@ class SmaCrossoverStrategy(Strategy):
             return Order(symbol=bar.symbol, action="sell", quantity=-self.quantity)
 
         return None
+
+
+class BuyAndHoldStrategy(Strategy):
+    def __init__(self, quantity: int = 100):
+        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)):
+            raise TypeError("quantity must be a number")
+        if quantity <= 0:
+            raise ValueError("quantity must be greater than 0")
+        self.quantity = quantity
+        self.bought: set[str] = set()
+
+    def on_bar(self, bar, history, portfolio) -> Optional[Order]:
+        if bar.symbol in self.bought:
+            return None
+        self.bought.add(bar.symbol)
+        return Order(symbol=bar.symbol, action="buy", quantity=self.quantity)
