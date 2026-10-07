@@ -1,5 +1,15 @@
 # changelog
 
+## 0.3.1
+
+- Hardening pass: `--compare` with no names and `--notional` + `--fraction`
+  together now fail fast with a clear CLI error instead of crashing or
+  silently ignoring a flag.
+- Fraction buys are capped by available cash, so multi-symbol sizing never
+  over-commits and no longer rejects the second name.
+- Committed a frozen AAPL sample parquet in `docs/` and a reproducibility
+  test, so the README results table rebuilds offline with no network.
+
 ## 0.3.0
 
 - Position sizing: orders carry `quantity` (shares), `notional` (signed

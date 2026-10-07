@@ -126,7 +126,7 @@ uv run pytest
 uvx ruff check src tests
 ```
 
-147 tests: strategy signals and validation, long/short accounting, limit
+156 tests: strategy signals and validation, long/short accounting, limit
 and stop fills, notional/fraction sizing, costs and realized PnL,
 multi-ticker feeds, engine fills, metrics math, demo-data determinism,
-CLI and comparison harness.
+sample/table reproducibility, CLI and comparison harness.

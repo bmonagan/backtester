@@ -1,6 +1,6 @@
 [project]
 name = "backtester"
-version = "0.3.0"
+version = "0.3.1"
 description = "tiny OHLC backtester"
 readme = "README.md"
 license = { text = "MIT" }

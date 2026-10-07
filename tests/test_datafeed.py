@@ -5,7 +5,7 @@ import pytest
 
 from backtester.datafeed import Bar, DataFeed
 
-REAL_DATA = "data/AAPL_1d.parquet"
+REAL_DATA = "docs/sample-aapl-1d-2020-2024.parquet"
 needs_real_data = pytest.mark.skipif(
     not os.path.exists(REAL_DATA), reason="sample parquet not committed"
 )
