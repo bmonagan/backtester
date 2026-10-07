@@ -28,11 +28,16 @@ def build_strategy(name: str, **kwargs):
     try:
         cls = STRATEGIES[name]
     except KeyError:
-        raise ValueError(f"unknown strategy {name!r}, choose from {sorted(STRATEGIES)}")
+        raise ValueError(
+            f"unknown strategy {name!r}, choose from {sorted(STRATEGIES)}"
+        )
     return cls(**kwargs)
 
 
-def run_one(name, feed_factory, starting_cash=10000.0, commission=0.0, slippage_bps=0.0, strategy_kwargs=None) -> dict:
+def run_one(
+    name, feed_factory, starting_cash=10000.0, commission=0.0,
+    slippage_bps=0.0, strategy_kwargs=None,
+) -> dict:
     feed = feed_factory()
     kwargs = (strategy_kwargs or {}).get(name, {})
     strategy = build_strategy(name, **kwargs)
@@ -42,9 +47,13 @@ def run_one(name, feed_factory, starting_cash=10000.0, commission=0.0, slippage_
     )
     pf = engine.run()
     eq = [s.total_equity for s in pf.history]
+    if engine.latest_prices:
+        final_equity = pf.current_equity(engine.latest_prices)
+    else:
+        final_equity = starting_cash
     return {
         "strategy": name,
-        "final_equity": pf.current_equity(engine.latest_prices) if engine.latest_prices else starting_cash,
+        "final_equity": final_equity,
         "trades": len(pf.trade_log),
         "fills": engine.n_fills,
         "rejected": engine.n_rejected,
@@ -61,8 +70,17 @@ def compare(names, feed_factory, **kwargs) -> list[dict]:
 
 
 def format_table(rows: list[dict]) -> str:
-    cols = ["strategy", "final_equity", "trades", "sharpe", "max_drawdown", "cagr", "win_rate", "realized_pnl"]
-    widths = {c: max(len(c), *(len(_fmt(c, r[c])) for r in rows)) for c in cols} if rows else {c: len(c) for c in cols}
+    cols = [
+        "strategy", "final_equity", "trades", "sharpe",
+        "max_drawdown", "cagr", "win_rate", "realized_pnl",
+    ]
+    if rows:
+        widths = {
+            c: max(len(c), *(len(_fmt(c, r[c])) for r in rows))
+            for c in cols
+        }
+    else:
+        widths = {c: len(c) for c in cols}
     header = "  ".join(c.ljust(widths[c]) for c in cols)
     lines = [header]
     for r in rows:

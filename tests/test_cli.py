@@ -29,10 +29,17 @@ def test_parser_defaults():
     assert args.cash == 1000000.0
 
 
+def _run_args(path, *extra):
+    return [
+        "--data", path, "--start", "2020-01-01", "--end", "2020-12-31",
+        "--cash", "10000", *extra,
+    ]
+
+
 def test_main_runs_and_writes_csv(tmp_path, capsys):
     path = _make_parquet(tmp_path)
     out = str(tmp_path / "equity.csv")
-    main(["--data", path, "--start", "2020-01-01", "--end", "2020-12-31", "--cash", "10000", "--out-csv", out])
+    main(_run_args(path, "--out-csv", out))
     captured = capsys.readouterr()
     assert "Final equity" in captured.out
     assert "Sharpe" in captured.out
@@ -43,7 +50,7 @@ def test_main_runs_and_writes_csv(tmp_path, capsys):
 
 def test_compare_prints_table(tmp_path, capsys):
     path = _make_parquet(tmp_path)
-    main(["--data", path, "--start", "2020-01-01", "--end", "2020-12-31", "--cash", "10000", "--compare", "sma,buyhold"])
+    main(_run_args(path, "--compare", "sma,buyhold"))
     out = capsys.readouterr().out
     assert "sma" in out and "buyhold" in out
     assert "sharpe" in out
@@ -52,7 +59,7 @@ def test_compare_prints_table(tmp_path, capsys):
 def test_compare_writes_csv(tmp_path):
     path = _make_parquet(tmp_path)
     out = str(tmp_path / "compare.csv")
-    main(["--data", path, "--start", "2020-01-01", "--end", "2020-12-31", "--cash", "10000", "--compare", "sma,rsi", "--out-csv", out])
+    main(_run_args(path, "--compare", "sma,rsi", "--out-csv", out))
     with open(out) as f:
         header = f.readline()
     assert "strategy" in header and "sharpe" in header

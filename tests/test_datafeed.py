@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import pytest
 
-from backtester.datafeed import DataFeed, Bar
+from backtester.datafeed import Bar, DataFeed
 
 REAL_DATA = "data/AAPL_1d.parquet"
 needs_real_data = pytest.mark.skipif(

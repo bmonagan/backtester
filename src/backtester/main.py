@@ -26,20 +26,40 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--donchian-exit", type=int, default=10)
     p.add_argument("--commission", type=float, default=0.0)
     p.add_argument("--slippage-bps", type=float, default=0.0)
-    p.add_argument("--compare", default=None, help="comma-separated strategy names, e.g. sma,buyhold,rsi")
+    p.add_argument(
+        "--compare", default=None,
+        help="comma-separated strategy names, e.g. sma,buyhold,rsi",
+    )
     p.add_argument("--out-csv", default=None)
     return p
 
 
 def strategy_kwargs_for(args, name: str) -> dict:
     if name == "sma":
-        return {"fast_period": args.fast, "slow_period": args.slow, "quantity": args.quantity}
+        return {
+            "fast_period": args.fast,
+            "slow_period": args.slow,
+            "quantity": args.quantity,
+        }
     if name == "rsi":
-        return {"period": args.rsi_period, "oversold": args.oversold, "overbought": args.overbought, "quantity": args.quantity}
+        return {
+            "period": args.rsi_period,
+            "oversold": args.oversold,
+            "overbought": args.overbought,
+            "quantity": args.quantity,
+        }
     if name == "bollinger":
-        return {"period": args.bb_period, "num_std": args.bb_std, "quantity": args.quantity}
+        return {
+            "period": args.bb_period,
+            "num_std": args.bb_std,
+            "quantity": args.quantity,
+        }
     if name == "donchian":
-        return {"entry_period": args.donchian_entry, "exit_period": args.donchian_exit, "quantity": args.quantity}
+        return {
+            "entry_period": args.donchian_entry,
+            "exit_period": args.donchian_exit,
+            "quantity": args.quantity,
+        }
     return {"quantity": args.quantity}
 
 
@@ -50,8 +70,14 @@ def main(argv=None):
         names = [n.strip() for n in args.compare.split(",") if n.strip()]
         bad = [n for n in names if n not in STRATEGIES]
         if bad:
-            raise ValueError(f"unknown strategies {bad}, choose from {sorted(STRATEGIES)}")
-        factory = lambda: DataFeed(start=args.start, end=args.end, data_source=args.data)
+            raise ValueError(
+                f"unknown strategies {bad}, choose from {sorted(STRATEGIES)}"
+            )
+
+        def factory():
+            return DataFeed(
+                start=args.start, end=args.end, data_source=args.data
+            )
         kwargs = {n: strategy_kwargs_for(args, n) for n in names}
         rows = compare(
             names, factory, starting_cash=args.cash,
@@ -68,7 +94,9 @@ def main(argv=None):
         return
 
     feed = DataFeed(start=args.start, end=args.end, data_source=args.data)
-    strategy = build_strategy(args.strategy, **strategy_kwargs_for(args, args.strategy))
+    strategy = build_strategy(
+        args.strategy, **strategy_kwargs_for(args, args.strategy)
+    )
     engine = BacktestEngine(
         feed=feed,
         strategy=strategy,
@@ -82,7 +110,10 @@ def main(argv=None):
     print("Final portfolio:")
     print(pf)
     print(f"Final equity: {pf.current_equity(engine.latest_prices):.2f}")
-    print(f"Trades: {len(pf.trade_log)} fills={engine.n_fills} rejected={engine.n_rejected}")
+    print(
+        f"Trades: {len(pf.trade_log)} "
+        f"fills={engine.n_fills} rejected={engine.n_rejected}"
+    )
     print(f"Sharpe: {sharpe_ratio(eq):.3f}")
     print(f"Max drawdown: {max_drawdown(eq):.3%}")
     print(f"CAGR: {cagr(eq):.3%}")
@@ -92,9 +123,15 @@ def main(argv=None):
     if args.out_csv:
         with open(args.out_csv, "w", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["timestamp", "cash", "holdings_value", "total_equity", "unrealized_pnl"])
+            w.writerow([
+                "timestamp", "cash", "holdings_value",
+                "total_equity", "unrealized_pnl",
+            ])
             for s in pf.history:
-                w.writerow([s.timestamp, s.cash, s.holdings_value, s.total_equity, s.unrealized_pnl])
+                w.writerow([
+                    s.timestamp, s.cash, s.holdings_value,
+                    s.total_equity, s.unrealized_pnl,
+                ])
         print(f"wrote {args.out_csv}")
 
 

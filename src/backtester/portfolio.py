@@ -1,6 +1,7 @@
 # portfolio.py
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+
 
 @dataclass
 class Position:
@@ -9,7 +10,10 @@ class Position:
     avg_price: float = 0.0
 
     def __repr__(self):
-        return f"Position(symbol='{self.symbol}', quantity={self.quantity}, avg_price={self.avg_price:.2f})"
+        return (
+            f"Position(symbol='{self.symbol}', quantity={self.quantity}, "
+            f"avg_price={self.avg_price:.2f})"
+        )
 
 @dataclass
 class PortfolioSnapshot:
@@ -20,7 +24,10 @@ class PortfolioSnapshot:
     unrealized_pnl: float
 
 class Portfolio:
-    def __init__(self, starting_cash: float, commission: float = 0.0, slippage_bps: float = 0.0):
+    def __init__(
+        self, starting_cash: float, commission: float = 0.0,
+        slippage_bps: float = 0.0,
+    ):
         if commission < 0:
             raise ValueError("commission must be >= 0")
         if slippage_bps < 0:
@@ -33,9 +40,13 @@ class Portfolio:
         self.trade_log: list[dict] = []
         self.history: list[PortfolioSnapshot] = []
         self.realized_pnl: float = 0.0
-        self._lots: dict[str, list[list[float]]] = defaultdict(list)  # symbol -> [[qty, per_share_basis]]
+        # symbol -> [[qty, per_share_basis]]
+        self._lots: dict[str, list[list[float]]] = defaultdict(list)
 
-    def _effective_price(self, quantity: float, fill_price: float, slippage_bps: float | None = None) -> float:
+    def _effective_price(
+        self, quantity: float, fill_price: float,
+        slippage_bps: float | None = None,
+    ) -> float:
         s = self.slippage_bps if slippage_bps is None else slippage_bps
         if s == 0:
             return fill_price
@@ -51,7 +62,9 @@ class Portfolio:
             if pos.quantity == 0:
                 continue
             if ticker not in prices or prices[ticker] is None:
-                raise KeyError(f"Missing price for active position in {ticker} at {timestamp}")
+                raise KeyError(
+                    f"Missing price for {ticker} at {timestamp}"
+                )
             price = prices[ticker]
 
             positions_value += pos.quantity * price
@@ -71,7 +84,11 @@ class Portfolio:
         self.equity_curve.append((timestamp, total_equity))
         return snapshot
 
-    def execute_order(self, timestamp, symbol: str, quantity: float, fill_price: float, commission: float | None = None, slippage_bps: float | None = None) -> bool:
+    def execute_order(
+        self, timestamp, symbol: str, quantity: float, fill_price: float,
+        commission: float | None = None,
+        slippage_bps: float | None = None,
+    ) -> bool:
         """Update cash/positions, append to trade_log."""
         if quantity == 0:
             return False
@@ -90,7 +107,9 @@ class Portfolio:
             self._lots[symbol].append([quantity, per_share])
 
             if symbol not in self.positions:
-                self.positions[symbol] = Position(symbol=symbol, quantity=quantity, avg_price=per_share)
+                self.positions[symbol] = Position(
+                    symbol=symbol, quantity=quantity, avg_price=per_share
+                )
             else:
                 pos = self.positions[symbol]
                 new_qty = pos.quantity + quantity

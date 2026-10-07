@@ -1,6 +1,7 @@
 # strategy.py
 from abc import ABC, abstractmethod
-from typing import Any, NamedTuple, Optional, TypedDict
+from typing import Any, Optional, TypedDict
+
 
 class Order(TypedDict):
     symbol: str
@@ -31,7 +32,10 @@ class SmaCrossoverStrategy(Strategy):
         if fast_period <= 0 or slow_period <= 0:
             raise ValueError("Periods must be greater than 0")
         if fast_period >= slow_period:
-            raise ValueError(f"fast_period ({fast_period}) must be less than slow_period ({slow_period})")
+            raise ValueError(
+                f"fast_period ({fast_period}) must be less than "
+                f"slow_period ({slow_period})"
+            )
 
         if isinstance(quantity, bool) or not isinstance(quantity, (int, float)):
             raise TypeError("quantity must be a number")
@@ -96,7 +100,10 @@ class RsiMomentumStrategy(Strategy):
     """Wilder's RSI crossover. Buy when RSI crosses up through oversold,
     sell when it crosses down through overbought. Long-only."""
 
-    def __init__(self, period: int = 14, oversold: float = 30, overbought: float = 70, quantity: int = 100):
+    def __init__(
+        self, period: int = 14, oversold: float = 30,
+        overbought: float = 70, quantity: int = 100,
+    ):
         if isinstance(period, bool) or not isinstance(period, int):
             raise TypeError("period must be an integer")
         if period <= 0:
@@ -218,7 +225,10 @@ class DonchianBreakoutStrategy(Strategy):
         if entry_period <= 0 or exit_period <= 0:
             raise ValueError("periods must be greater than 0")
         if exit_period >= entry_period:
-            raise ValueError(f"exit_period ({exit_period}) must be less than entry_period ({entry_period})")
+            raise ValueError(
+                f"exit_period ({exit_period}) must be less than "
+                f"entry_period ({entry_period})"
+            )
         if isinstance(quantity, bool) or not isinstance(quantity, (int, float)):
             raise TypeError("quantity must be a number")
         if quantity <= 0:

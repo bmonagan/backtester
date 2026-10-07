@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from backtester.portfolio import Portfolio, Position
+from backtester.portfolio import Portfolio
 
 
 def test_initial_state():

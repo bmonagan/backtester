@@ -62,7 +62,10 @@ def test_missing_ohlc_raises(tmp_path):
 def test_missing_symbol_infers_from_file_or_param(tmp_path):
     idx = pd.date_range("2020-01-02", periods=2, freq="D")
     df = pd.DataFrame(
-        {"Open": [1.0, 2.0], "High": [1.0, 2.0], "Low": [1.0, 2.0], "Close": [1.0, 2.0], "Volume": [10, 10]},
+        {
+            "Open": [1.0, 2.0], "High": [1.0, 2.0], "Low": [1.0, 2.0],
+            "Close": [1.0, 2.0], "Volume": [10, 10],
+        },
         index=idx,
     )
     path = str(tmp_path / "AAPL_1d.parquet")

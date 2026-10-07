@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterator
+
 import pandas as pd
 
 
@@ -21,7 +22,10 @@ REQUIRED_COLS = {"Open", "High", "Low", "Close", "Volume"}
 
 
 class DataFeed:
-    def __init__(self, start: str | datetime, end: str | datetime, data_source: str, symbols: list[str] | str | None = None):
+    def __init__(
+        self, start: str | datetime, end: str | datetime,
+        data_source: str, symbols: list[str] | str | None = None,
+    ):
         self.start = start
         self.end = end
         self.data_source = data_source
@@ -30,18 +34,24 @@ class DataFeed:
         self.requested_symbols = symbols
         self.bars = self._load()
         self.symbols: list[str] = sorted({b.symbol for b in self.bars})
-        self._index: dict[tuple[str, object], int] = {(b.symbol, b.timestamp): i for i, b in enumerate(self.bars)}
+        self._index: dict[tuple[str, object], int] = {
+            (b.symbol, b.timestamp): i for i, b in enumerate(self.bars)
+        }
         self._dates = {b.timestamp for b in self.bars}
 
     def _load(self) -> list[Bar]:
         df = pd.read_parquet(self.data_source).sort_index()
         df = df.loc[self.start:self.end]
         if df.empty:
-            raise ValueError(f"No bars in [{self.start}:{self.end}] for {self.data_source}")
+            raise ValueError(
+                f"No bars in [{self.start}:{self.end}] for {self.data_source}"
+            )
 
         missing = REQUIRED_COLS - set(df.columns)
         if missing:
-            raise ValueError(f"Missing OHLCV columns {sorted(missing)} in {self.data_source}")
+            raise ValueError(
+                f"Missing OHLCV columns {sorted(missing)} in {self.data_source}"
+            )
 
         # symbol handling: use column if present, else infer or require symbols param
         if "Symbol" not in df.columns:
@@ -53,21 +63,32 @@ class DataFeed:
                 df = df.copy()
                 df["Symbol"] = inferred
             else:
-                raise ValueError(f"No Symbol column in {self.data_source}, pass symbols=[...]")
+                raise ValueError(
+                    f"No Symbol column in {self.data_source}, pass symbols=[...]"
+                )
 
         if self.requested_symbols:
             df = df[df["Symbol"].isin(self.requested_symbols)]
             if df.empty:
-                raise ValueError(f"No bars for symbols {self.requested_symbols} in [{self.start}:{self.end}]")
+                raise ValueError(
+                    f"No bars for {self.requested_symbols} in "
+                    f"[{self.start}:{self.end}]"
+                )
 
         bars = [
-            Bar(timestamp=row.Index, symbol=row.Symbol, open=row.Open, high=row.High, low=row.Low, close=row.Close, volume=row.Volume)
+            Bar(
+                timestamp=row.Index, symbol=row.Symbol, open=row.Open,
+                high=row.High, low=row.Low, close=row.Close,
+                volume=row.Volume,
+            )
             for row in df.itertuples()
         ]
         # deterministic time-major, symbol-minor order for multi-ticker
         bars.sort(key=lambda b: (b.timestamp, b.symbol))
         if not bars:
-            raise ValueError(f"No bars in [{self.start}:{self.end}] for {self.data_source}")
+            raise ValueError(
+                f"No bars in [{self.start}:{self.end}] for {self.data_source}"
+            )
         return bars
 
     def _infer_symbol(self) -> str | None:

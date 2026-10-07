@@ -25,20 +25,28 @@ def test_unknown_strategy_raises():
 
 def test_run_one_returns_all_keys():
     row = run_one("buyhold", _ramp_factory(), starting_cash=10000.0)
-    for key in ["strategy", "final_equity", "trades", "fills", "rejected", "sharpe", "max_drawdown", "cagr", "win_rate", "realized_pnl"]:
+    for key in [
+        "strategy", "final_equity", "trades", "fills", "rejected",
+        "sharpe", "max_drawdown", "cagr", "win_rate", "realized_pnl",
+    ]:
         assert key in row
     assert row["strategy"] == "buyhold"
     assert row["trades"] == 1
 
 
+NAMES = ["sma", "buyhold", "rsi", "bollinger", "donchian"]
+
+
 def test_compare_runs_every_name_with_fresh_feeds():
-    rows = compare(["sma", "buyhold", "rsi", "bollinger", "donchian"], _ramp_factory(), starting_cash=10000.0)
-    assert [r["strategy"] for r in rows] == ["sma", "buyhold", "rsi", "bollinger", "donchian"]
+    rows = compare(NAMES, _ramp_factory(), starting_cash=10000.0)
+    assert [r["strategy"] for r in rows] == NAMES
     assert all(r["final_equity"] > 0 for r in rows)
 
 
 def test_format_table_lists_names():
-    rows = compare(["sma", "buyhold"], _ramp_factory(), starting_cash=10000.0)
+    rows = compare(
+        ["sma", "buyhold"], _ramp_factory(), starting_cash=10000.0
+    )
     table = format_table(rows)
     assert "sma" in table and "buyhold" in table
     assert "sharpe" in table
