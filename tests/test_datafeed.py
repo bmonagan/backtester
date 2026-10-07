@@ -44,7 +44,7 @@ def test_start_end_filtering(tmp_path):
 
 def test_empty_slice_raises(tmp_path):
     path = _make_parquet(tmp_path)
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         DataFeed(start="2030-01-01", end="2030-12-31", data_source=path)
 
 
