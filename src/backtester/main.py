@@ -1,10 +1,10 @@
 import argparse
 import csv
 
+from backtester.compare import STRATEGIES, build_strategy, compare, format_table
 from backtester.datafeed import DataFeed
 from backtester.engine import BacktestEngine
 from backtester.metrics import cagr, max_drawdown, sharpe_ratio, win_rate
-from backtester.strategy import BuyAndHoldStrategy, SmaCrossoverStrategy
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -13,24 +13,62 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--start", default="2020-01-01")
     p.add_argument("--end", default="2024-01-01")
     p.add_argument("--cash", type=float, default=1000000.0)
-    p.add_argument("--strategy", choices=["sma", "buyhold"], default="sma")
+    p.add_argument("--strategy", choices=sorted(STRATEGIES), default="sma")
     p.add_argument("--fast", type=int, default=20)
     p.add_argument("--slow", type=int, default=50)
     p.add_argument("--quantity", type=float, default=100)
+    p.add_argument("--rsi-period", type=int, default=14)
+    p.add_argument("--oversold", type=float, default=30)
+    p.add_argument("--overbought", type=float, default=70)
+    p.add_argument("--bb-period", type=int, default=20)
+    p.add_argument("--bb-std", type=float, default=2.0)
+    p.add_argument("--donchian-entry", type=int, default=20)
+    p.add_argument("--donchian-exit", type=int, default=10)
     p.add_argument("--commission", type=float, default=0.0)
     p.add_argument("--slippage-bps", type=float, default=0.0)
+    p.add_argument("--compare", default=None, help="comma-separated strategy names, e.g. sma,buyhold,rsi")
     p.add_argument("--out-csv", default=None)
     return p
+
+
+def strategy_kwargs_for(args, name: str) -> dict:
+    if name == "sma":
+        return {"fast_period": args.fast, "slow_period": args.slow, "quantity": args.quantity}
+    if name == "rsi":
+        return {"period": args.rsi_period, "oversold": args.oversold, "overbought": args.overbought, "quantity": args.quantity}
+    if name == "bollinger":
+        return {"period": args.bb_period, "num_std": args.bb_std, "quantity": args.quantity}
+    if name == "donchian":
+        return {"entry_period": args.donchian_entry, "exit_period": args.donchian_exit, "quantity": args.quantity}
+    return {"quantity": args.quantity}
 
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
 
+    if args.compare:
+        names = [n.strip() for n in args.compare.split(",") if n.strip()]
+        bad = [n for n in names if n not in STRATEGIES]
+        if bad:
+            raise ValueError(f"unknown strategies {bad}, choose from {sorted(STRATEGIES)}")
+        factory = lambda: DataFeed(start=args.start, end=args.end, data_source=args.data)
+        kwargs = {n: strategy_kwargs_for(args, n) for n in names}
+        rows = compare(
+            names, factory, starting_cash=args.cash,
+            commission=args.commission, slippage_bps=args.slippage_bps,
+            strategy_kwargs=kwargs,
+        )
+        print(format_table(rows))
+        if args.out_csv:
+            with open(args.out_csv, "w", newline="") as f:
+                w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+                w.writeheader()
+                w.writerows(rows)
+            print(f"wrote {args.out_csv}")
+        return
+
     feed = DataFeed(start=args.start, end=args.end, data_source=args.data)
-    if args.strategy == "sma":
-        strategy = SmaCrossoverStrategy(fast_period=args.fast, slow_period=args.slow, quantity=args.quantity)
-    else:
-        strategy = BuyAndHoldStrategy(quantity=args.quantity)
+    strategy = build_strategy(args.strategy, **strategy_kwargs_for(args, args.strategy))
     engine = BacktestEngine(
         feed=feed,
         strategy=strategy,
