@@ -3,6 +3,7 @@ name = "backtester"
 version = "0.1.0"
 description = "tiny OHLC backtester"
 readme = "README.md"
+license = { text = "MIT" }
 authors = [
     { name = "bmonagan", email = "bernardmonagan@gmail.com" }
 ]
