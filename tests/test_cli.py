@@ -23,12 +23,27 @@ def _make_parquet(tmp_path):
     return path
 
 
+def _make_parquet_closes(tmp_path, closes, name="series.parquet"):
+    idx = pd.date_range("2020-01-02", periods=len(closes), freq="D")
+    df = pd.DataFrame(
+        {
+            "Open": closes, "High": closes, "Low": closes, "Close": closes,
+            "Volume": [100] * len(closes), "Symbol": ["AAPL"] * len(closes),
+        },
+        index=idx,
+    )
+    path = str(tmp_path / name)
+    df.to_parquet(path)
+    return path
+
+
 def test_parser_defaults():
     args = build_parser().parse_args([])
     assert args.strategy == "sma"
     assert args.cash == 100000.0
     assert args.notional is None
     assert args.fraction is None
+    assert args.allow_shorts is False
 
 
 def _run_args(path, *extra):
@@ -96,3 +111,33 @@ def test_fraction_sizing_runs(tmp_path, capsys):
     path = _make_parquet(tmp_path)
     main(_run_args(path, "--strategy", "buyhold", "--fraction", "0.5"))
     assert "Final equity" in capsys.readouterr().out
+
+
+def _death_cross_path(tmp_path):
+    # rising then falling forces a death-cross sell; the trailing bar is
+    # where that queued order fills (next-open fill model)
+    return _make_parquet_closes(tmp_path, [1.0, 2.0, 3.0, 2.0, 1.0, 1.0])
+
+
+def test_allow_shorts_opens_short(tmp_path, capsys):
+    path = _death_cross_path(tmp_path)
+    main(_run_args(path, "--strategy", "sma", "--fast", "2", "--slow", "3", "--allow-shorts"))
+    out = capsys.readouterr().out
+    assert "'AAPL'" in out
+    assert "quantity=-" in out
+
+
+def test_shorts_rejected_without_flag(tmp_path, capsys):
+    path = _death_cross_path(tmp_path)
+    main(_run_args(path, "--strategy", "sma", "--fast", "2", "--slow", "3"))
+    out = capsys.readouterr().out
+    assert "quantity=-" not in out
+
+
+def test_compare_allow_shorts(tmp_path, capsys):
+    path = _death_cross_path(tmp_path)
+    main(_run_args(
+        path, "--fast", "2", "--slow", "3",
+        "--compare", "sma", "--allow-shorts",
+    ))
+    assert "sma" in capsys.readouterr().out

@@ -29,6 +29,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--commission", type=float, default=0.0)
     p.add_argument("--slippage-bps", type=float, default=0.0)
     p.add_argument(
+        "--allow-shorts", action="store_true",
+        help="let sell orders open short positions instead of being rejected",
+    )
+    p.add_argument(
         "--compare", default=None,
         help="comma-separated strategy names, e.g. sma,buyhold,rsi",
     )
@@ -99,7 +103,7 @@ def main(argv=None):
         rows = compare(
             names, factory, starting_cash=args.cash,
             commission=args.commission, slippage_bps=args.slippage_bps,
-            strategy_kwargs=kwargs,
+            strategy_kwargs=kwargs, allow_shorts=args.allow_shorts,
         )
         print(format_table(rows))
         if args.out_csv:
@@ -120,6 +124,7 @@ def main(argv=None):
         starting_cash=args.cash,
         commission=args.commission,
         slippage_bps=args.slippage_bps,
+        allow_shorts=args.allow_shorts,
     )
 
     pf = engine.run()

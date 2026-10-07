@@ -36,7 +36,7 @@ def build_strategy(name: str, **kwargs):
 
 def run_one(
     name, feed_factory, starting_cash=10000.0, commission=0.0,
-    slippage_bps=0.0, strategy_kwargs=None,
+    slippage_bps=0.0, strategy_kwargs=None, allow_shorts=False,
 ) -> dict:
     feed = feed_factory()
     kwargs = (strategy_kwargs or {}).get(name, {})
@@ -44,6 +44,7 @@ def run_one(
     engine = BacktestEngine(
         feed=feed, strategy=strategy, starting_cash=starting_cash,
         commission=commission, slippage_bps=slippage_bps,
+        allow_shorts=allow_shorts,
     )
     pf = engine.run()
     eq = [s.total_equity for s in pf.history]

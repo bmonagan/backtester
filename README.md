@@ -54,6 +54,12 @@ uv run backtester --data data/demo_1d.parquet --strategy sma --notional 10000
 uv run backtester --data data/demo_1d.parquet --strategy buyhold --fraction 0.5
 ```
 
+Let sell signals open shorts (naked sells are rejected by default):
+
+```bash
+uv run backtester --data data/demo_1d.parquet --strategy sma --allow-shorts
+```
+
 Fetch fresh data:
 
 ```bash
