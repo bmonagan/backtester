@@ -8,7 +8,7 @@ import pandas as pd
 
 @dataclass
 class Bar:
-    timestamp: datetime
+    timestamp: object
     symbol: str
     open: float
     high: float

@@ -1,6 +1,6 @@
-from datafeed import DataFeed
-from strategy import SmaCrossoverStrategy
-from engine import BacktestEngine
+from backtester.datafeed import DataFeed
+from backtester.strategy import SmaCrossoverStrategy
+from backtester.engine import BacktestEngine
 
 
 def main():

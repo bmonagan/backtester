@@ -1,11 +1,15 @@
 # engine.py
 from collections import defaultdict
-from typing import Dict, List, Optional
-from portfolio import Portfolio
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from backtester.portfolio import Portfolio
+
+if TYPE_CHECKING:
+    from backtester.datafeed import Bar, DataFeed
+    from backtester.strategy import Strategy
 
 
 class BacktestEngine:
-    def __init__(self, feed: "DataFeed", strategy: "Strategy", starting_cash: float):
+    def __init__(self, feed: Any, strategy: Any, starting_cash: float):
         self.feed = feed
         self.strategy = strategy
         self.portfolio = Portfolio(starting_cash)
@@ -13,7 +17,7 @@ class BacktestEngine:
         # History segregated per symbol for clean multi-asset support
         self.history: Dict[str, List["Bar"]] = defaultdict(list)
         self.latest_prices: Dict[str, float] = {}
-        self.pending_orders: List[dict] = []
+        self.pending_orders: List[Any] = []
 
     def run(self) -> Portfolio:
         for bar in self.feed:
