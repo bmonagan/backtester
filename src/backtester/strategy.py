@@ -204,3 +204,46 @@ class BollingerMeanReversionStrategy(Strategy):
             self.in_position.discard(bar.symbol)
             return Order(symbol=bar.symbol, action="sell", quantity=-self.quantity)
         return None
+
+
+class DonchianBreakoutStrategy(Strategy):
+    """Buy on close above the prior entry_period highest high,
+    sell on close below the prior exit_period lowest low.
+    Long-only, one position per symbol at a time."""
+
+    def __init__(self, entry_period: int = 20, exit_period: int = 10, quantity: int = 100):
+        for name, val in (("entry_period", entry_period), ("exit_period", exit_period)):
+            if isinstance(val, bool) or not isinstance(val, int):
+                raise TypeError(f"{name} must be an integer")
+        if entry_period <= 0 or exit_period <= 0:
+            raise ValueError("periods must be greater than 0")
+        if exit_period >= entry_period:
+            raise ValueError(f"exit_period ({exit_period}) must be less than entry_period ({entry_period})")
+        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)):
+            raise TypeError("quantity must be a number")
+        if quantity <= 0:
+            raise ValueError("quantity must be greater than 0")
+        self.entry_period = entry_period
+        self.exit_period = exit_period
+        self.quantity = quantity
+        self.in_position: set[str] = set()
+
+    def on_bar(self, bar, history, portfolio) -> Optional[Order]:
+        if len(history) <= self.entry_period:
+            return None
+        # prior windows exclude the current bar to avoid lookahead
+        prior = history[:-1]
+        highest = max(b.high for b in prior[-self.entry_period:])
+        lowest = min(b.low for b in prior[-self.exit_period:])
+        close = history[-1].close
+
+        if bar.symbol not in self.in_position:
+            if close > highest:
+                self.in_position.add(bar.symbol)
+                return Order(symbol=bar.symbol, action="buy", quantity=self.quantity)
+            return None
+
+        if close < lowest:
+            self.in_position.discard(bar.symbol)
+            return Order(symbol=bar.symbol, action="sell", quantity=-self.quantity)
+        return None
