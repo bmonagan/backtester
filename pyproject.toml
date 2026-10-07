@@ -1,31 +1,33 @@
 [project]
 name = "backtester"
 version = "0.1.0"
-description = "Add your description here"
+description = "tiny OHLC backtester"
 readme = "README.md"
 authors = [
     { name = "bmonagan", email = "bernardmonagan@gmail.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
-    "pandas>=3.0.6",
-    "pyarrow>=25.0.1",
-    "yfinance>=1.7.0",
+    "pandas>=2.0",
+    "pyarrow>=15.0",
+    "yfinance>=0.2.0",
     "pytest>=8.0",
 ]
 
 [project.scripts]
-backtester = "backtester:main"
+backtester = "backtester.main:main"
 
 [build-system]
 requires = ["uv_build>=0.12.1,<0.13.0"]
 build-backend = "uv_build"
 
-[tool.uv.workspace]
-members = [
-    "backtester",
-]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src/backtester"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
