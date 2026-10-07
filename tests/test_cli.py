@@ -141,3 +141,43 @@ def test_compare_allow_shorts(tmp_path, capsys):
         "--compare", "sma", "--allow-shorts",
     ))
     assert "sma" in capsys.readouterr().out
+
+
+def test_parser_order_type_defaults():
+    args = build_parser().parse_args([])
+    assert args.order_type == "market"
+    assert args.order_price is None
+
+
+def test_order_type_requires_price(tmp_path):
+    path = _make_parquet(tmp_path)
+    with pytest.raises(SystemExit):
+        main(_run_args(path, "--order-type", "limit"))
+
+
+def test_limit_order_fills(tmp_path, capsys):
+    path = _make_parquet_closes(tmp_path, [100.0, 100.0, 90.0, 90.0])
+    main(_run_args(
+        path, "--strategy", "buyhold",
+        "--order-type", "limit", "--order-price", "95",
+    ))
+    out = capsys.readouterr().out
+    assert "'AAPL'" in out
+
+
+def test_limit_order_never_fills(tmp_path, capsys):
+    path = _make_parquet_closes(tmp_path, [100.0, 100.0, 90.0, 90.0])
+    main(_run_args(
+        path, "--strategy", "buyhold",
+        "--order-type", "limit", "--order-price", "50",
+    ))
+    assert "Positions: {}" in capsys.readouterr().out
+
+
+def test_compare_order_type_runs(tmp_path, capsys):
+    path = _make_parquet_closes(tmp_path, [100.0, 100.0, 90.0, 90.0])
+    main(_run_args(
+        path, "--compare", "buyhold",
+        "--order-type", "limit", "--order-price", "95",
+    ))
+    assert "buyhold" in capsys.readouterr().out

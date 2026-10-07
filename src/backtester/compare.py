@@ -5,12 +5,15 @@ feed_factory must be a zero-arg callable returning a FRESH feed each call
 (feeds are single-pass iterables, so they cannot be shared across runs).
 """
 
+from typing import Literal
+
 from backtester.engine import BacktestEngine
 from backtester.metrics import cagr, max_drawdown, sharpe_ratio, win_rate
 from backtester.strategy import (
     BollingerMeanReversionStrategy,
     BuyAndHoldStrategy,
     DonchianBreakoutStrategy,
+    OrderTypeOverride,
     RsiMomentumStrategy,
     SmaCrossoverStrategy,
 )
@@ -37,10 +40,14 @@ def build_strategy(name: str, **kwargs):
 def run_one(
     name, feed_factory, starting_cash=10000.0, commission=0.0,
     slippage_bps=0.0, strategy_kwargs=None, allow_shorts=False,
+    order_type: Literal["market", "limit", "stop"] = "market",
+    order_price=None,
 ) -> dict:
     feed = feed_factory()
     kwargs = (strategy_kwargs or {}).get(name, {})
     strategy = build_strategy(name, **kwargs)
+    if order_type != "market":
+        strategy = OrderTypeOverride(strategy, order_type, order_price)
     engine = BacktestEngine(
         feed=feed, strategy=strategy, starting_cash=starting_cash,
         commission=commission, slippage_bps=slippage_bps,

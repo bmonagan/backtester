@@ -60,6 +60,14 @@ Let sell signals open shorts (naked sells are rejected by default):
 uv run backtester --data data/demo_1d.parquet --strategy sma --allow-shorts
 ```
 
+Stamp a resting order type onto every order (limit rests until touched,
+stop triggers on touch):
+
+```bash
+uv run backtester --data data/demo_1d.parquet --strategy buyhold \
+  --order-type limit --order-price 90
+```
+
 Fetch fresh data:
 
 ```bash
