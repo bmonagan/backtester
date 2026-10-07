@@ -39,4 +39,6 @@ def test_quantity_validation():
     with pytest.raises(ValueError):
         BuyAndHoldStrategy(quantity=0)
     with pytest.raises(TypeError):
-        BuyAndHoldStrategy(quantity=None)
+        BuyAndHoldStrategy(quantity=True)
+    # None means unset and falls back to the 100-share default
+    assert BuyAndHoldStrategy(quantity=None).sizing == {"quantity": 100}
