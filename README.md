@@ -123,10 +123,10 @@ will be rejected for insufficient funds.
 
 ```bash
 uv run pytest
-uvx ruff check src tests
+uvx ruff check src tests scripts
 ```
 
-156 tests: strategy signals and validation, long/short accounting, limit
+157 tests: strategy signals and validation, long/short accounting, limit
 and stop fills, notional/fraction sizing, costs and realized PnL,
 multi-ticker feeds, engine fills, metrics math, demo-data determinism,
 sample/table reproducibility, CLI and comparison harness.

@@ -4,6 +4,7 @@ Nothing here touches the network. Output stays under data/ (git-ignored).
 """
 
 import argparse
+import os
 
 import numpy as np
 import pandas as pd
@@ -56,6 +57,9 @@ def main(argv=None) -> str:
     p.add_argument("--out", default="data/demo_1d.parquet")
     args = p.parse_args(argv)
     tickers = [t.strip() for t in args.tickers.split(",") if t.strip()]
+    out_dir = os.path.dirname(args.out)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     df = generate(tickers, args.days, args.seed)
     df.to_parquet(args.out)
     print(f"wrote {len(df)} rows for {tickers} to {args.out}")

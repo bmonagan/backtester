@@ -1,5 +1,6 @@
 import argparse
-import pandas as pd
+import os
+
 import yfinance as yf
 
 
@@ -21,6 +22,9 @@ def fetch(symbol: str, start: str, end: str, interval: str, out: str | None = No
     assert (df["High"] >= df["Low"]).all()
 
     out = out or f"data/{symbol}_1d.parquet"
+    out_dir = os.path.dirname(out)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     df.to_parquet(out)
     print(df.head())
     return out

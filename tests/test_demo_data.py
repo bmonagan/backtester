@@ -39,6 +39,13 @@ def test_main_writes_parquet(tmp_path):
     assert len(df) == 30
 
 
+def test_main_creates_missing_output_dir(tmp_path):
+    # mirrors a fresh clone where data/ is git-ignored and absent
+    out = str(tmp_path / "nested" / "data" / "demo.parquet")
+    make_demo_data.main(["--tickers", "DEMO_A", "--days", "10", "--seed", "7", "--out", out])
+    assert os.path.exists(out)
+
+
 def test_demo_loads_in_datafeed_and_backtests(tmp_path):
     out = str(tmp_path / "demo.parquet")
     make_demo_data.main(["--tickers", "DEMO_A,DEMO_B", "--days", "60", "--seed", "7", "--out", out])
