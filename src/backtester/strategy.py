@@ -326,3 +326,12 @@ class DonchianBreakoutStrategy(Strategy):
             self.in_position.discard(bar.symbol)
             return _sized_order(self.sizing, bar.symbol, "sell")
         return None
+
+
+class TurtleTradingStrategy(DonchianBreakoutStrategy):
+    """Turtle System 1-style momentum signal: 20-bar breakout entry,
+    10-bar channel exit. Uses the same configurable sizing as Donchian.
+
+    This models the channel-breakout signal, not the full original Turtle
+    rules for N-based risk sizing, pyramiding, or protective stops.
+    """
