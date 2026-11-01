@@ -16,6 +16,7 @@ from backtester.strategy import (
     OrderTypeOverride,
     RsiMomentumStrategy,
     SmaCrossoverStrategy,
+    TurtleTradingStrategy,
 )
 
 STRATEGIES = {
@@ -24,6 +25,7 @@ STRATEGIES = {
     "rsi": RsiMomentumStrategy,
     "bollinger": BollingerMeanReversionStrategy,
     "donchian": DonchianBreakoutStrategy,
+    "turtle": TurtleTradingStrategy,
 }
 
 

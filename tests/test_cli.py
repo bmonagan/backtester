@@ -44,6 +44,8 @@ def test_parser_defaults():
     assert args.notional is None
     assert args.fraction is None
     assert args.allow_shorts is False
+    assert args.turtle_entry == 20
+    assert args.turtle_exit == 10
 
 
 def _run_args(path, *extra):
@@ -71,6 +73,18 @@ def test_compare_prints_table(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "sma" in out and "buyhold" in out
     assert "sharpe" in out
+
+
+def test_turtle_strategy_runs_from_cli(tmp_path, capsys):
+    path = _make_parquet(tmp_path)
+    main(_run_args(path, "--strategy", "turtle"))
+    assert "Final equity" in capsys.readouterr().out
+
+
+def test_compare_accepts_turtle_strategy(tmp_path, capsys):
+    path = _make_parquet(tmp_path)
+    main(_run_args(path, "--compare", "turtle"))
+    assert "turtle" in capsys.readouterr().out
 
 
 def test_compare_writes_csv(tmp_path):

@@ -27,6 +27,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--bb-std", type=float, default=2.0)
     p.add_argument("--donchian-entry", type=int, default=20)
     p.add_argument("--donchian-exit", type=int, default=10)
+    p.add_argument("--turtle-entry", type=int, default=20)
+    p.add_argument("--turtle-exit", type=int, default=10)
     p.add_argument("--commission", type=float, default=0.0)
     p.add_argument("--slippage-bps", type=float, default=0.0)
     p.add_argument(
@@ -82,6 +84,12 @@ def strategy_kwargs_for(args, name: str) -> dict:
         return {
             "entry_period": args.donchian_entry,
             "exit_period": args.donchian_exit,
+            **sizing,
+        }
+    if name == "turtle":
+        return {
+            "entry_period": args.turtle_entry,
+            "exit_period": args.turtle_exit,
             **sizing,
         }
     return dict(sizing)

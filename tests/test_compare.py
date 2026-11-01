@@ -14,8 +14,10 @@ def _ramp_factory(n=60):
     return make
 
 
-def test_registry_has_all_five():
-    assert sorted(STRATEGIES) == ["bollinger", "buyhold", "donchian", "rsi", "sma"]
+def test_registry_has_all_six():
+    assert sorted(STRATEGIES) == [
+        "bollinger", "buyhold", "donchian", "rsi", "sma", "turtle",
+    ]
 
 
 def test_unknown_strategy_raises():
@@ -34,7 +36,7 @@ def test_run_one_returns_all_keys():
     assert row["trades"] == 1
 
 
-NAMES = ["sma", "buyhold", "rsi", "bollinger", "donchian"]
+NAMES = ["sma", "buyhold", "rsi", "bollinger", "donchian", "turtle"]
 
 
 def test_compare_runs_every_name_with_fresh_feeds():

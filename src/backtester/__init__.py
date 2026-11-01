@@ -12,6 +12,7 @@ from backtester.strategy import (
     RsiMomentumStrategy,
     SmaCrossoverStrategy,
     Strategy,
+    TurtleTradingStrategy,
 )
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "RsiMomentumStrategy",
     "BollingerMeanReversionStrategy",
     "DonchianBreakoutStrategy",
+    "TurtleTradingStrategy",
     "OrderTypeOverride",
     "Order",
     "sharpe_ratio",
