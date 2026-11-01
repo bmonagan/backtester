@@ -23,8 +23,9 @@ uv run backtester --data docs/sample-aapl-1d-2020-2024.parquet \
 
 Full rows in [`docs/compare-aapl-2020-2024.csv`](docs/compare-aapl-2020-2024.csv).
 
-See the [October 2026 S&P futures strategy comparison](docs/strategy-comparison-es-2026-10.md)
-for all built-in strategies and parameter variations on daily `ES=F` bars.
+See the [one-year S&P futures strategy comparison](docs/strategy-comparison-es-2026-10.md)
+for all built-in strategies and parameter variations on daily `ES=F` bars,
+including the pre-period warm-up.
 
 | strategy  | final_equity | trades | sharpe | max_drawdown | cagr | win_rate | realized_pnl |
 |-----------|--------------|--------|--------|--------------|------|----------|--------------|
