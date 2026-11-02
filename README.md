@@ -27,6 +27,13 @@ See the [one-year S&P futures strategy comparison](docs/strategy-comparison-es-2
 for all built-in strategies and parameter variations on daily `ES=F` bars,
 including the pre-period warm-up.
 
+See the [top-five cryptocurrency strategy comparison](docs/strategy-comparison-crypto-top5-2026-10.md)
+for the same one-year window and warm-up across the five assets ranked highest
+by market capitalization, including Tether.
+
+The [crypto strategy suggestion](docs/crypto-strategy-suggestion-2026-10.md)
+summarizes what the results do—and do not—support.
+
 | strategy  | final_equity | trades | sharpe | max_drawdown | cagr | win_rate | realized_pnl |
 |-----------|--------------|--------|--------|--------------|------|----------|--------------|
 | sma       | 106256.08    | 21     | 0.570  | 4.6%         | 1.5% | 50.0%    | 5793.72      |
