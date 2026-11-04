@@ -1,6 +1,18 @@
 from backtester.compare import STRATEGIES, build_strategy, compare, format_table, run_one
 from backtester.datafeed import Bar, DataFeed
 from backtester.engine import BacktestEngine
+from backtester.extra_strategies import (
+    AtrTrailingBreakoutStrategy,
+    CciStrategy,
+    EmaCrossoverStrategy,
+    IchimokuCloudStrategy,
+    KeltnerChannelStrategy,
+    MacdStrategy,
+    RateOfChangeStrategy,
+    StochasticOscillatorStrategy,
+    VwapMeanReversionStrategy,
+    WilliamsRStrategy,
+)
 from backtester.metrics import cagr, max_drawdown, sharpe_ratio, win_rate
 from backtester.portfolio import Portfolio, PortfolioSnapshot, Position
 from backtester.strategy import (
@@ -29,6 +41,16 @@ __all__ = [
     "BollingerMeanReversionStrategy",
     "DonchianBreakoutStrategy",
     "TurtleTradingStrategy",
+    "EmaCrossoverStrategy",
+    "MacdStrategy",
+    "RateOfChangeStrategy",
+    "StochasticOscillatorStrategy",
+    "WilliamsRStrategy",
+    "CciStrategy",
+    "KeltnerChannelStrategy",
+    "AtrTrailingBreakoutStrategy",
+    "IchimokuCloudStrategy",
+    "VwapMeanReversionStrategy",
     "OrderTypeOverride",
     "Order",
     "sharpe_ratio",
