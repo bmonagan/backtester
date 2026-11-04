@@ -8,6 +8,18 @@ feed_factory must be a zero-arg callable returning a FRESH feed each call
 from typing import Literal
 
 from backtester.engine import BacktestEngine
+from backtester.extra_strategies import (
+    AtrTrailingBreakoutStrategy,
+    CciStrategy,
+    EmaCrossoverStrategy,
+    IchimokuCloudStrategy,
+    KeltnerChannelStrategy,
+    MacdStrategy,
+    RateOfChangeStrategy,
+    StochasticOscillatorStrategy,
+    VwapMeanReversionStrategy,
+    WilliamsRStrategy,
+)
 from backtester.metrics import cagr, max_drawdown, sharpe_ratio, win_rate
 from backtester.strategy import (
     BollingerMeanReversionStrategy,
@@ -26,6 +38,16 @@ STRATEGIES = {
     "bollinger": BollingerMeanReversionStrategy,
     "donchian": DonchianBreakoutStrategy,
     "turtle": TurtleTradingStrategy,
+    "ema": EmaCrossoverStrategy,
+    "macd": MacdStrategy,
+    "roc": RateOfChangeStrategy,
+    "stochastic": StochasticOscillatorStrategy,
+    "williamsr": WilliamsRStrategy,
+    "cci": CciStrategy,
+    "keltner": KeltnerChannelStrategy,
+    "atrtrail": AtrTrailingBreakoutStrategy,
+    "ichimoku": IchimokuCloudStrategy,
+    "vwap": VwapMeanReversionStrategy,
 }
 
 
@@ -33,15 +55,18 @@ def build_strategy(name: str, **kwargs):
     try:
         cls = STRATEGIES[name]
     except KeyError:
-        raise ValueError(
-            f"unknown strategy {name!r}, choose from {sorted(STRATEGIES)}"
-        )
+        raise ValueError(f"unknown strategy {name!r}, choose from {sorted(STRATEGIES)}")
     return cls(**kwargs)
 
 
 def run_one(
-    name, feed_factory, starting_cash=10000.0, commission=0.0,
-    slippage_bps=0.0, strategy_kwargs=None, allow_shorts=False,
+    name,
+    feed_factory,
+    starting_cash=10000.0,
+    commission=0.0,
+    slippage_bps=0.0,
+    strategy_kwargs=None,
+    allow_shorts=False,
     order_type: Literal["market", "limit", "stop"] = "market",
     order_price=None,
 ) -> dict:
@@ -51,8 +76,11 @@ def run_one(
     if order_type != "market":
         strategy = OrderTypeOverride(strategy, order_type, order_price)
     engine = BacktestEngine(
-        feed=feed, strategy=strategy, starting_cash=starting_cash,
-        commission=commission, slippage_bps=slippage_bps,
+        feed=feed,
+        strategy=strategy,
+        starting_cash=starting_cash,
+        commission=commission,
+        slippage_bps=slippage_bps,
         allow_shorts=allow_shorts,
     )
     pf = engine.run()
@@ -81,14 +109,17 @@ def compare(names, feed_factory, **kwargs) -> list[dict]:
 
 def format_table(rows: list[dict]) -> str:
     cols = [
-        "strategy", "final_equity", "trades", "sharpe",
-        "max_drawdown", "cagr", "win_rate", "realized_pnl",
+        "strategy",
+        "final_equity",
+        "trades",
+        "sharpe",
+        "max_drawdown",
+        "cagr",
+        "win_rate",
+        "realized_pnl",
     ]
     if rows:
-        widths = {
-            c: max(len(c), *(len(_fmt(c, r[c])) for r in rows))
-            for c in cols
-        }
+        widths = {c: max(len(c), *(len(_fmt(c, r[c])) for r in rows)) for c in cols}
     else:
         widths = {c: len(c) for c in cols}
     header = "  ".join(c.ljust(widths[c]) for c in cols)
