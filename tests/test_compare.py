@@ -14,9 +14,24 @@ def _ramp_factory(n=60):
     return make
 
 
-def test_registry_has_all_six():
+def test_registry_has_all_sixteen():
     assert sorted(STRATEGIES) == [
-        "bollinger", "buyhold", "donchian", "rsi", "sma", "turtle",
+        "atrtrail",
+        "bollinger",
+        "buyhold",
+        "cci",
+        "donchian",
+        "ema",
+        "ichimoku",
+        "keltner",
+        "macd",
+        "roc",
+        "rsi",
+        "sma",
+        "stochastic",
+        "turtle",
+        "vwap",
+        "williamsr",
     ]
 
 
@@ -28,15 +43,40 @@ def test_unknown_strategy_raises():
 def test_run_one_returns_all_keys():
     row = run_one("buyhold", _ramp_factory(), starting_cash=10000.0)
     for key in [
-        "strategy", "final_equity", "trades", "fills", "rejected",
-        "sharpe", "max_drawdown", "cagr", "win_rate", "realized_pnl",
+        "strategy",
+        "final_equity",
+        "trades",
+        "fills",
+        "rejected",
+        "sharpe",
+        "max_drawdown",
+        "cagr",
+        "win_rate",
+        "realized_pnl",
     ]:
         assert key in row
     assert row["strategy"] == "buyhold"
     assert row["trades"] == 1
 
 
-NAMES = ["sma", "buyhold", "rsi", "bollinger", "donchian", "turtle"]
+NAMES = [
+    "sma",
+    "buyhold",
+    "rsi",
+    "bollinger",
+    "donchian",
+    "turtle",
+    "ema",
+    "macd",
+    "roc",
+    "stochastic",
+    "williamsr",
+    "cci",
+    "keltner",
+    "atrtrail",
+    "ichimoku",
+    "vwap",
+]
 
 
 def test_compare_runs_every_name_with_fresh_feeds():
@@ -46,9 +86,7 @@ def test_compare_runs_every_name_with_fresh_feeds():
 
 
 def test_format_table_lists_names():
-    rows = compare(
-        ["sma", "buyhold"], _ramp_factory(), starting_cash=10000.0
-    )
+    rows = compare(["sma", "buyhold"], _ramp_factory(), starting_cash=10000.0)
     table = format_table(rows)
     assert "sma" in table and "buyhold" in table
     assert "sharpe" in table
