@@ -3,7 +3,7 @@
 [![pytest](https://github.com/bmonagan/backtester/actions/workflows/pytest.yml/badge.svg)](https://github.com/bmonagan/backtester/actions/workflows/pytest.yml)
 ![coverage](./docs/coverage.svg)
 
-Event-driven daily-bar backtester in Python. Six strategies, long and short
+Event-driven daily-bar backtester in Python. Sixteen strategies, long and short
 positions, market/limit/stop orders, FIFO PnL with commissions and slippage,
 and a comparison harness that runs every strategy over identical feeds into
 one Sharpe/drawdown/CAGR/win-rate table.
@@ -34,6 +34,16 @@ by market capitalization, including Tether.
 The [crypto strategy suggestion](docs/crypto-strategy-suggestion-2026-10.md)
 summarizes what the results do—and do not—support.
 
+The [cross-asset strategy research report](docs/cross-asset-strategy-research-2026-10.md)
+tests ten additional strategy families over crypto, equities, and futures;
+its [510-row Sharpe-ranked output](docs/cross-asset-strategy-results-2025-11-to-2026-10.csv)
+and [research suggestion](docs/cross-asset-strategy-suggestion-2026-10.md)
+include the risk-adjusted results and limitations.
+
+The [top-25 strict backtest readiness plan](docs/top-25-strict-backtest-readiness-plan.md)
+records the current ranking and the simulator work required before those
+strategies can be tested under realistic market conditions.
+
 | strategy  | final_equity | trades | sharpe | max_drawdown | cagr | win_rate | realized_pnl |
 |-----------|--------------|--------|--------|--------------|------|----------|--------------|
 | sma       | 106256.08    | 21     | 0.570  | 4.6%         | 1.5% | 50.0%    | 5793.72      |
@@ -56,7 +66,8 @@ Compare every strategy over the same feed (committed sample, runs offline):
 
 ```bash
 uv run backtester --data docs/sample-aapl-1d-2020-2024.parquet \
-  --compare sma,buyhold,rsi,bollinger,donchian --out-csv compare.csv
+  --compare sma,buyhold,rsi,bollinger,donchian,turtle,ema,macd,roc,stochastic,williamsr,cci,keltner,atrtrail,ichimoku,vwap \
+  --out-csv compare.csv
 ```
 
 Size positions by shares, dollars, or equity fraction:
@@ -95,12 +106,18 @@ DataFeed (parquet → Bars) → Strategy.on_bar → BacktestEngine → Portfolio
 - `DataFeed` loads parquet, validates OHLCV columns, slices by date, and
   emits time-major bars for one or many tickers.
 - Strategies see one bar plus that symbol's history and return an order or
-  `None`: `sma`, `buyhold`, `rsi`, `bollinger`, `donchian`, `turtle`.
+  `None`: `sma`, `buyhold`, `rsi`, `bollinger`, `donchian`, `turtle`, `ema`,
+  `macd`, `roc`, `stochastic`, `williamsr`, `cci`, `keltner`, `atrtrail`,
+  `ichimoku`, `vwap`.
 - `turtle` implements the Turtle System 1-style momentum signal: buy a close
   above the prior 20-bar high and exit below the prior 10-bar low. Configure
   with `--turtle-entry` and `--turtle-exit`. It reuses the backtester's
   quantity/notional/fraction sizing; it does not model the original system's
   volatility-based N sizing, pyramiding, protective stops, or breakout filter.
+- Additional strategies include EMA crossover, MACD, rate-of-change,
+  stochastic, Williams %R, CCI, Keltner channel, ATR trailing breakout,
+  Ichimoku cloud, and VWAP mean reversion. Their defaults and parameters are
+  available through the strategy classes and comparison registry.
 - The engine fills orders queued from the previous bar at the current bar's
   open, marks to market every bar, and counts fills vs rejects.
 - `Portfolio` tracks cash, average-cost positions, FIFO realized PnL, and a
@@ -143,7 +160,8 @@ will be rejected for insufficient funds.
 ## layout
 
 - `src/backtester/datafeed.py` — parquet → `Bar` list, single or multi-ticker
-- `src/backtester/strategy.py` — strategies behind one `on_bar` interface
+- `src/backtester/strategy.py` and `src/backtester/extra_strategies.py` —
+  strategies behind one `on_bar` interface
 - `src/backtester/engine.py` — event loop, next-open fills, fill/reject counts
 - `src/backtester/portfolio.py` — cash, positions, commission/slippage, FIFO PnL
 - `src/backtester/metrics.py` — sharpe, max drawdown, cagr, win rate
