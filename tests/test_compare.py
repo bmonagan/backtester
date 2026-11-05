@@ -53,6 +53,14 @@ def test_run_one_returns_all_keys():
         "cagr",
         "win_rate",
         "realized_pnl",
+        "sortino",
+        "annualized_volatility",
+        "max_drawdown_duration",
+        "historical_var",
+        "expected_shortfall",
+        "turnover",
+        "average_gross_exposure",
+        "average_margin_utilization",
     ]:
         assert key in row
     assert row["strategy"] == "buyhold"
@@ -90,3 +98,5 @@ def test_format_table_lists_names():
     table = format_table(rows)
     assert "sma" in table and "buyhold" in table
     assert "sharpe" in table
+    assert "sortino" in table
+    assert "expected_shortfall" in table

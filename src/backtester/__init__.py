@@ -20,7 +20,18 @@ from backtester.instruments import (
     InstrumentSpec,
     MarginSchedule,
 )
-from backtester.metrics import cagr, max_drawdown, sharpe_ratio, win_rate
+from backtester.metrics import (
+    annualized_volatility,
+    cagr,
+    historical_expected_shortfall,
+    historical_var,
+    max_drawdown,
+    max_drawdown_duration,
+    portfolio_metrics,
+    sharpe_ratio,
+    sortino_ratio,
+    win_rate,
+)
 from backtester.portfolio import Portfolio, PortfolioSnapshot, Position
 from backtester.strategy import (
     BollingerMeanReversionStrategy,
@@ -68,7 +79,13 @@ __all__ = [
     "Order",
     "OrderUpdate",
     "sharpe_ratio",
+    "sortino_ratio",
+    "annualized_volatility",
     "max_drawdown",
+    "max_drawdown_duration",
+    "historical_var",
+    "historical_expected_shortfall",
+    "portfolio_metrics",
     "cagr",
     "win_rate",
     "STRATEGIES",

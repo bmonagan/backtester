@@ -27,6 +27,7 @@ class PortfolioSnapshot:
     total_equity: float
     unrealized_pnl: float
     margin_used: float = 0.0
+    gross_exposure: float = 0.0
 
 class Portfolio:
     def __init__(
@@ -90,6 +91,7 @@ class Portfolio:
         positions_value = 0.0
         total_cost_basis = 0.0
         margin_used = 0.0
+        gross_exposure = 0.0
 
         for ticker, pos in self.positions.items():
             if pos.quantity == 0:
@@ -101,6 +103,7 @@ class Portfolio:
             price = prices[ticker]
             spec = self.instrument_specs.get(ticker)
             multiplier = spec.multiplier if spec and spec.multiplier else 1.0
+            gross_exposure += abs(pos.quantity * price * multiplier)
             if spec and spec.asset_class == "future":
                 if spec.margin_schedule is None:
                     raise ValueError(f"{ticker} futures metadata requires margin")
@@ -127,6 +130,7 @@ class Portfolio:
             total_equity=total_equity,
             unrealized_pnl=unrealized_pnl,
             margin_used=margin_used,
+            gross_exposure=gross_exposure,
         )
         self.history.append(snapshot)
         self.equity_curve.append((timestamp, total_equity))

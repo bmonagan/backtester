@@ -62,6 +62,7 @@ def test_futures_variation_margin_multiplier_and_margin_are_accounted():
     )
     assert portfolio.cash == pytest.approx(10_098.0)
     assert portfolio.history[-1].margin_used == pytest.approx(1000.0)
+    assert portfolio.history[-1].gross_exposure == pytest.approx(5100.0)
 
     assert portfolio.execute_order("t2", "FUT", -1, 103.0)
     assert portfolio.cash == pytest.approx(10_146.0)

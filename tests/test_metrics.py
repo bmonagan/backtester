@@ -2,7 +2,19 @@ import math
 
 import pytest
 
-from backtester.metrics import cagr, max_drawdown, sharpe_ratio, win_rate
+from backtester.metrics import (
+    annualized_volatility,
+    cagr,
+    historical_expected_shortfall,
+    historical_var,
+    max_drawdown,
+    max_drawdown_duration,
+    portfolio_metrics,
+    sharpe_ratio,
+    sortino_ratio,
+    win_rate,
+)
+from backtester.portfolio import Portfolio
 
 
 def test_sharpe_flat_returns_zero():
@@ -113,3 +125,89 @@ def test_win_rate_fifo_partial():
         {"symbol": "AAPL", "quantity": -6, "fill_price": 4.0},
     ]
     assert win_rate(log) == pytest.approx(0.5)
+
+
+def test_annualized_volatility_uses_account_returns():
+    curve = [100.0, 110.0, 99.0, 108.9]
+    returns = [0.1, -0.1, 0.1]
+    expected = math.sqrt(sum((value - math.fsum(returns) / 3) ** 2 for value in returns) / 3)
+    assert annualized_volatility(curve, periods_per_year=1) == pytest.approx(expected)
+
+
+def test_sortino_uses_downside_deviation_below_risk_free_target():
+    curve = [100.0, 110.0, 99.0, 108.9]
+    returns = [0.1, -0.1, 0.1]
+    downside = math.sqrt(0.1**2 / 3)
+    expected = (math.fsum(returns) / 3) / downside
+    assert sortino_ratio(curve, periods_per_year=1) == pytest.approx(expected)
+
+
+def test_max_drawdown_duration_counts_underwater_observations():
+    assert max_drawdown_duration([100, 120, 110, 100, 120, 90, 90, 120]) == 2
+    assert max_drawdown_duration([100, 110, 120]) == 0
+
+
+def test_historical_var_and_expected_shortfall_are_positive_losses():
+    curve = [100.0, 110.0, 99.0, 103.95, 83.16, 91.476]
+    assert historical_var(curve, confidence_level=0.8) == pytest.approx(0.2)
+    assert historical_expected_shortfall(
+        curve, confidence_level=0.8
+    ) == pytest.approx(0.2)
+
+
+def test_return_metrics_reject_nonpositive_beginning_equity():
+    with pytest.raises(ValueError, match="beginning equity"):
+        annualized_volatility([0.0, 1.0])
+
+
+def test_portfolio_metrics_report_account_return_turnover_and_exposure():
+    portfolio = Portfolio(10_000.0)
+    assert portfolio.execute_order("t0", "AAPL", 10, 100.0)
+    portfolio.mark_to_market("t0", {"AAPL": 100.0})
+    portfolio.mark_to_market("t1", {"AAPL": 110.0})
+
+    metrics = portfolio_metrics(portfolio)
+
+    assert metrics["total_return"] == pytest.approx(0.01)
+    assert metrics["turnover"] == pytest.approx(1000.0 / 10050.0)
+    assert metrics["average_gross_exposure"] == pytest.approx(
+        (0.1 + 1100.0 / 10100.0) / 2
+    )
+    assert metrics["average_margin_utilization"] == 0.0
+
+
+def test_portfolio_return_metrics_are_invariant_to_proportional_scale():
+    outputs = []
+    for scale in (1, 2):
+        portfolio = Portfolio(10_000.0 * scale)
+        assert portfolio.execute_order("t0", "AAPL", 10 * scale, 100.0)
+        portfolio.mark_to_market("t0", {"AAPL": 100.0})
+        portfolio.mark_to_market("t1", {"AAPL": 105.0})
+        portfolio.mark_to_market("t2", {"AAPL": 95.0})
+        outputs.append(portfolio_metrics(portfolio))
+
+    for key in (
+        "total_return",
+        "annualized_return",
+        "sharpe",
+        "sortino",
+        "annualized_volatility",
+        "max_drawdown",
+        "turnover",
+        "average_gross_exposure",
+    ):
+        assert outputs[0][key] == pytest.approx(outputs[1][key])
+
+
+def test_portfolio_metrics_consolidate_multiple_marks_at_same_timestamp():
+    portfolio = Portfolio(10_000.0)
+    assert portfolio.execute_order("t0", "AAPL", 10, 100.0)
+    assert portfolio.execute_order("t0", "MSFT", 10, 50.0)
+    portfolio.mark_to_market("t0", {"AAPL": 100.0, "MSFT": 50.0})
+    portfolio.mark_to_market("t0", {"AAPL": 100.0, "MSFT": 60.0})
+    portfolio.mark_to_market("t1", {"AAPL": 110.0, "MSFT": 55.0})
+
+    metrics = portfolio_metrics(portfolio)
+
+    assert metrics["total_return"] == pytest.approx(50.0 / 10100.0)
+    assert metrics["sharpe"] == 0.0

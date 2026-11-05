@@ -20,7 +20,13 @@ from backtester.extra_strategies import (
     VwapMeanReversionStrategy,
     WilliamsRStrategy,
 )
-from backtester.metrics import cagr, max_drawdown, sharpe_ratio, win_rate
+from backtester.metrics import (
+    cagr,
+    max_drawdown,
+    portfolio_metrics,
+    sharpe_ratio,
+    win_rate,
+)
 from backtester.strategy import (
     BollingerMeanReversionStrategy,
     BuyAndHoldStrategy,
@@ -89,6 +95,7 @@ def run_one(
         final_equity = pf.current_equity(engine.latest_prices)
     else:
         final_equity = starting_cash
+    risk_metrics = portfolio_metrics(pf)
     return {
         "strategy": name,
         "final_equity": final_equity,
@@ -100,6 +107,7 @@ def run_one(
         "cagr": cagr(eq),
         "win_rate": win_rate(pf.trade_log),
         "realized_pnl": pf.realized_pnl,
+        **risk_metrics,
     }
 
 
@@ -117,6 +125,14 @@ def format_table(rows: list[dict]) -> str:
         "cagr",
         "win_rate",
         "realized_pnl",
+        "sortino",
+        "annualized_volatility",
+        "max_drawdown_duration",
+        "historical_var",
+        "expected_shortfall",
+        "turnover",
+        "average_gross_exposure",
+        "average_margin_utilization",
     ]
     if rows:
         widths = {c: max(len(c), *(len(_fmt(c, r[c])) for r in rows)) for c in cols}
@@ -136,8 +152,22 @@ def _fmt(col: str, val) -> str:
         return str(val)
     if col == "sharpe":
         return f"{val:.3f}"
-    if col in ("max_drawdown", "cagr", "win_rate"):
+    if col in (
+        "max_drawdown",
+        "cagr",
+        "win_rate",
+        "sortino",
+        "annualized_volatility",
+        "historical_var",
+        "expected_shortfall",
+        "average_gross_exposure",
+        "average_margin_utilization",
+    ):
         return f"{val:.1%}"
+    if col == "max_drawdown_duration":
+        return str(val)
+    if col in ("turnover",):
+        return f"{val:.2f}"
     if col == "realized_pnl":
         return f"{val:.2f}"
     return str(val)
