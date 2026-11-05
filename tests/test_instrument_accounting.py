@@ -133,6 +133,31 @@ def test_fractional_quantity_increment_is_rejected():
     assert portfolio.positions == {}
 
 
+def test_gross_leverage_cap_rejects_exposure_increase_but_allows_exit():
+    spec = InstrumentSpec(
+        symbol="EQ",
+        asset_class="equity",
+        quote_currency="USD",
+        multiplier=1.0,
+    )
+    portfolio = Portfolio(
+        2_000.0,
+        instrument_specs={"EQ": spec},
+        max_gross_leverage=0.5,
+    )
+
+    assert portfolio.execute_order("t0", "EQ", 10, 100.0)
+    assert not portfolio.execute_order("t1", "EQ", 1, 100.0)
+    assert portfolio.execute_order("t2", "EQ", -10, 100.0)
+    assert portfolio.cash == pytest.approx(2_000.0)
+
+
+@pytest.mark.parametrize("leverage", [0.0, -1.0, float("inf"), float("nan"), True])
+def test_gross_leverage_cap_rejects_invalid_values(leverage):
+    with pytest.raises(ValueError, match="max_gross_leverage"):
+        Portfolio(1_000.0, max_gross_leverage=leverage)
+
+
 def test_instrument_specs_must_share_cash_currency():
     usd = _equity_spec("USD_EQ")
     eur = InstrumentSpec(

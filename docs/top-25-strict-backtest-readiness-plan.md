@@ -229,7 +229,20 @@ recommendation.
 
 - The engine can optionally require complete metadata for every observed
   symbol, and notional/fraction sizing accounts for an instrument's multiplier.
+- Orders now receive stable IDs and append `pending`, `filled`, `rejected`,
+  and `cancelled` lifecycle events. Pending duplicate-symbol orders are
+  rejected without replacing the resting order; `cancel_order` explicitly
+  cancels a resting order.
+- An optional gross-leverage cap rejects exposure-increasing fills while
+  allowing reductions; instrument quantity increments and futures initial
+  margin checks are enforced at the ledger.
+- Strategies that keep long-position signal state receive terminal updates.
+  Buy/hold, Donchian/Turtle, Bollinger, and the added long-only signal
+  strategies restore state after rejected/cancelled orders and synchronize
+  on fills. Wrapped strategies forward these updates.
 - **Still outstanding:** strategy state is still signal-based, order lifecycle
-  events, portfolio exposure limits, risk-budget sizing, partial fills,
-  borrow/funding, maintenance-margin liquidation, and fill-aware target
-  position state are not implemented.
+  transitions do not cover every custom strategy; target-position orders,
+  account-risk sizing, cross-currency exposure caps, partial fills,
+  expiring orders, borrow/funding, and maintenance-margin liquidation are
+  not implemented. Duplicate rejection and retry do not guarantee that the
+  signal remains valid at a later fill.

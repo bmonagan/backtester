@@ -11,6 +11,27 @@ def _bars(closes, symbol="AAPL"):
     ]
 
 
+def _accept(strategy, order, order_id):
+    if order is not None:
+        strategy.on_order_update(
+            {
+                "order_id": order_id,
+                "status": "pending",
+                "symbol": order["symbol"],
+                "action": order["action"],
+            }
+        )
+        strategy.on_order_update(
+            {
+                "order_id": order_id,
+                "status": "filled",
+                "symbol": order["symbol"],
+                "action": order["action"],
+            }
+        )
+    return order
+
+
 def test_rejects_bad_params():
     with pytest.raises(TypeError):
         DonchianBreakoutStrategy(entry_period=20.5)
@@ -40,6 +61,7 @@ def test_staircase_breakout_emits_single_buy():
         o = s.on_bar(bar=bars[i], history=bars[: i + 1], portfolio=None)
         if o:
             orders.append((i, o))
+            _accept(s, o, i)
     buys = [o for _, o in orders if o["action"] == "buy"]
     assert len(buys) == 1
     assert buys[0]["quantity"] == 4
@@ -54,5 +76,6 @@ def test_breakdown_after_entry_exits():
         o = s.on_bar(bar=bars[i], history=bars[: i + 1], portfolio=None)
         if o:
             orders.append((i, o))
+            _accept(s, o, i)
     assert [o["action"] for _, o in orders] == ["buy", "sell"]
     assert orders[-1][1]["quantity"] == -4

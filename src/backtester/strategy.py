@@ -16,6 +16,17 @@ class Order(TypedDict):
     price: NotRequired[float | None]
 
 
+class OrderUpdate(TypedDict):
+    order_id: int
+    symbol: str | None
+    action: str | None
+    status: Literal["pending", "filled", "rejected", "cancelled", "expired"]
+    timestamp: object | None
+    reason: str | None
+    fill_price: float | None
+    quantity: float | None
+
+
 def _validate_sizing(quantity=None, notional=None, fraction=None) -> dict:
     """Exactly one magnitude; unset means the legacy 100-share default."""
     given = [
@@ -70,6 +81,10 @@ class Strategy(ABC):
         """
         ...
 
+    def on_order_update(self, _event: OrderUpdate) -> None:
+        """Receive pending and terminal order lifecycle updates."""
+        del _event
+
 
 class OrderTypeOverride(Strategy):
     """Wrap any strategy and stamp one order type + resting price onto its
@@ -101,6 +116,49 @@ class OrderTypeOverride(Strategy):
         else:
             stamped["price"] = self.price
         return stamped
+
+    def on_order_update(self, event: OrderUpdate) -> None:
+        callback = getattr(self.inner, "on_order_update", None)
+        if callable(callback):
+            callback(event)
+
+
+class _PositionSignalStrategy(Strategy):
+    def __init__(self):
+        self.in_position: set[str] = set()
+        self._state_before_order: dict[int, tuple[str, bool]] = {}
+
+    def on_order_update(self, event: OrderUpdate) -> None:
+        if event.get("reason") == "duplicate_pending_order":
+            return
+        symbol = event.get("symbol")
+        order_id = event.get("order_id")
+        status = event["status"]
+        if status == "pending":
+            if isinstance(order_id, int):
+                self._state_before_order[order_id] = (
+                    symbol,
+                    symbol in self.in_position,
+                )
+            if event.get("action") == "buy":
+                self.in_position.add(symbol)
+            elif event.get("action") == "sell":
+                self.in_position.discard(symbol)
+        elif status == "filled" and event.get("action") == "buy":
+            self._state_before_order.pop(order_id, None)
+            self.in_position.add(symbol)
+        elif event["status"] == "filled" and event.get("action") == "sell":
+            self._state_before_order.pop(order_id, None)
+            self.in_position.discard(symbol)
+        elif status in ("rejected", "cancelled", "expired"):
+            previous = self._state_before_order.pop(order_id, None)
+            if previous is not None:
+                previous_symbol, was_in_position = previous
+                if was_in_position:
+                    self.in_position.add(previous_symbol)
+                else:
+                    self.in_position.discard(previous_symbol)
+
 
 class SmaCrossoverStrategy(Strategy):
     def __init__(
@@ -162,12 +220,34 @@ class BuyAndHoldStrategy(Strategy):
     def __init__(self, quantity=None, notional=None, fraction=None):
         self.sizing = _validate_sizing(quantity, notional, fraction)
         self.bought: set[str] = set()
+        self._state_before_order: dict[int, tuple[str, bool]] = {}
 
     def on_bar(self, bar, history, portfolio) -> Optional[Order]:
         if bar.symbol in self.bought:
             return None
-        self.bought.add(bar.symbol)
         return _sized_order(self.sizing, bar.symbol, "buy")
+
+    def on_order_update(self, event: OrderUpdate) -> None:
+        if event.get("reason") == "duplicate_pending_order":
+            return
+        symbol = event.get("symbol")
+        order_id = event.get("order_id")
+        if event["status"] == "pending":
+            if isinstance(order_id, int):
+                self._state_before_order[order_id] = (symbol, symbol in self.bought)
+            if event.get("action") == "buy":
+                self.bought.add(symbol)
+        elif event["status"] == "filled" and event.get("action") == "buy":
+            self._state_before_order.pop(order_id, None)
+            self.bought.add(symbol)
+        elif event["status"] in ("rejected", "cancelled", "expired"):
+            previous = self._state_before_order.pop(order_id, None)
+            if previous is not None:
+                previous_symbol, was_bought = previous
+                if was_bought:
+                    self.bought.add(previous_symbol)
+                else:
+                    self.bought.discard(previous_symbol)
 
 
 class RsiMomentumStrategy(Strategy):
@@ -234,7 +314,7 @@ class RsiMomentumStrategy(Strategy):
         return None
 
 
-class BollingerMeanReversionStrategy(Strategy):
+class BollingerMeanReversionStrategy(_PositionSignalStrategy):
     """Buy when close crosses below the lower band, sell the position
     when close crosses above the upper band. Long-only, one position
     per symbol at a time."""
@@ -254,7 +334,7 @@ class BollingerMeanReversionStrategy(Strategy):
         self.period = period
         self.num_std = num_std
         self.sizing = _validate_sizing(quantity, notional, fraction)
-        self.in_position: set[str] = set()
+        super().__init__()
 
     def _bands(self, history) -> tuple[float, float]:
         closes = [b.close for b in history[-self.period:]]
@@ -273,17 +353,15 @@ class BollingerMeanReversionStrategy(Strategy):
 
         if bar.symbol not in self.in_position:
             if prev_close >= prev_lower and close < lower:
-                self.in_position.add(bar.symbol)
                 return _sized_order(self.sizing, bar.symbol, "buy")
             return None
 
         if prev_close <= prev_upper and close > upper:
-            self.in_position.discard(bar.symbol)
             return _sized_order(self.sizing, bar.symbol, "sell")
         return None
 
 
-class DonchianBreakoutStrategy(Strategy):
+class DonchianBreakoutStrategy(_PositionSignalStrategy):
     """Buy on close above the prior entry_period highest high,
     sell on close below the prior exit_period lowest low.
     Long-only, one position per symbol at a time."""
@@ -305,7 +383,7 @@ class DonchianBreakoutStrategy(Strategy):
         self.entry_period = entry_period
         self.exit_period = exit_period
         self.sizing = _validate_sizing(quantity, notional, fraction)
-        self.in_position: set[str] = set()
+        super().__init__()
 
     def on_bar(self, bar, history, portfolio) -> Optional[Order]:
         if len(history) <= self.entry_period:
@@ -318,12 +396,10 @@ class DonchianBreakoutStrategy(Strategy):
 
         if bar.symbol not in self.in_position:
             if close > highest:
-                self.in_position.add(bar.symbol)
                 return _sized_order(self.sizing, bar.symbol, "buy")
             return None
 
         if close < lowest:
-            self.in_position.discard(bar.symbol)
             return _sized_order(self.sizing, bar.symbol, "sell")
         return None
 

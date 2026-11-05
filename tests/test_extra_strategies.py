@@ -64,6 +64,18 @@ def _bars(closes, symbol="TEST", volume=100):
     ]
 
 
+def _accept(strategy, order, order_id):
+    if order is not None and hasattr(strategy, "on_order_update"):
+        event = {
+            "order_id": order_id,
+            "symbol": order["symbol"],
+            "action": order["action"],
+        }
+        strategy.on_order_update({**event, "status": "pending"})
+        strategy.on_order_update({**event, "status": "filled"})
+    return order
+
+
 def test_each_strategy_generates_long_entry_and_exit():
     closes = [
         10,
@@ -104,14 +116,36 @@ def test_each_strategy_generates_long_entry_and_exit():
     bars = _bars(closes)
     for factory in STRATEGY_FACTORIES:
         strategy = factory()
-        orders = [
-            strategy.on_bar(bar, bars[: index + 1], portfolio=None)
-            for index, bar in enumerate(bars)
-        ]
+        orders = []
+        for index, bar in enumerate(bars):
+            order = strategy.on_bar(bar, bars[: index + 1], portfolio=None)
+            orders.append(order)
+            _accept(strategy, order, index)
         emitted = [order for order in orders if order]
         assert [order["action"] for order in emitted[:2]] == ["buy", "sell"]
         assert emitted[0]["quantity"] == 3
         assert emitted[1]["quantity"] == -3
+
+
+def test_additional_strategy_restores_position_after_rejected_exit():
+    strategy = EmaCrossoverStrategy(fast_period=2, slow_period=4)
+    strategy.in_position.add("TEST")
+
+    strategy.on_order_update(
+        {"order_id": 1, "status": "pending", "action": "sell", "symbol": "TEST"}
+    )
+    assert strategy.in_position == set()
+    strategy.on_order_update(
+        {
+            "order_id": 1,
+            "status": "rejected",
+            "action": "sell",
+            "symbol": "TEST",
+            "reason": "portfolio_rejected",
+        }
+    )
+
+    assert strategy.in_position == {"TEST"}
 
 
 def test_flat_prices_do_not_generate_orders():
@@ -156,6 +190,7 @@ def test_strategies_keep_position_state_per_symbol():
         for index, bar in enumerate(bars_a)
     ]
     assert orders[-1]["action"] == "buy"
+    _accept(strategy, orders[-1], 10)
     assert strategy.on_bar(bars_a[-1], bars_a, portfolio=None) is None
     bars_b = _bars([10, 9, 8, 7, 8, 9], symbol="B")
     assert strategy.on_bar(bars_b[-1], bars_b, portfolio=None)["action"] == "buy"
@@ -179,5 +214,7 @@ def test_atr_breakout_waits_for_atr_history_before_trailing_exit():
     )
     bars = _bars([10, 10, 11, 13, 16])
     assert strategy.on_bar(bars[2], bars[:3], None) is None
-    assert strategy.on_bar(bars[3], bars[:4], None)["action"] == "buy"
+    entry = strategy.on_bar(bars[3], bars[:4], None)
+    assert entry["action"] == "buy"
+    _accept(strategy, entry, 1)
     assert strategy.on_bar(bars[4], bars, None) is None

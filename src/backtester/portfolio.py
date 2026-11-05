@@ -33,11 +33,19 @@ class Portfolio:
         self, starting_cash: float, commission: float = 0.0,
         slippage_bps: float = 0.0, allow_shorts: bool = False,
         instrument_specs: dict[str, InstrumentSpec] | None = None,
+        max_gross_leverage: float | None = None,
     ):
         if commission < 0:
             raise ValueError("commission must be >= 0")
         if slippage_bps < 0:
             raise ValueError("slippage_bps must be >= 0")
+        if max_gross_leverage is not None and (
+            isinstance(max_gross_leverage, bool)
+            or not isinstance(max_gross_leverage, (int, float))
+            or not isfinite(max_gross_leverage)
+            or max_gross_leverage <= 0
+        ):
+            raise ValueError("max_gross_leverage must be finite and greater than zero")
         self.cash = starting_cash
         self.commission = commission
         self.slippage_bps = slippage_bps
@@ -49,6 +57,8 @@ class Portfolio:
         if len(currencies) > 1:
             raise ValueError("all instrument quote currencies must match portfolio cash")
         self.cash_currency = next(iter(currencies), None)
+        self.max_gross_leverage = max_gross_leverage
+        self._last_prices: dict[str, float] = {}
         self.positions: dict[str, Position] = {}
         self.equity_curve: list[tuple] = []  # (timestamp, equity)
         self.trade_log: list[dict] = []
@@ -114,6 +124,7 @@ class Portfolio:
         )
         self.history.append(snapshot)
         self.equity_curve.append((timestamp, total_equity))
+        self._last_prices.update(prices)
         return snapshot
 
     def execute_order(
@@ -136,12 +147,15 @@ class Portfolio:
         eff = self._effective_price(quantity, fill_price, slippage_bps)
         pos = self.positions.get(symbol)
         pos_qty = pos.quantity if pos else 0.0
+        multiplier = spec.multiplier if spec and spec.multiplier else 1.0
+        if not self._within_gross_leverage(
+            symbol, pos_qty + quantity, fill_price, multiplier
+        ):
+            return False
         if spec and spec.asset_class == "future":
             return self._execute_future_order(
                 timestamp, symbol, quantity, fill_price, eff, comm, spec, pos
             )
-        multiplier = spec.multiplier if spec and spec.multiplier else 1.0
-
         # 1. Buying (covers shorts first, then opens/extends long)
         if quantity > 0:
             if quantity * eff * multiplier + comm > self.cash:
@@ -267,6 +281,39 @@ class Portfolio:
             "cash_balance": self.cash,
         })
         return True
+
+    def _within_gross_leverage(
+        self, symbol: str, projected_quantity: float, fill_price: float, multiplier: float
+    ) -> bool:
+        if self.max_gross_leverage is None:
+            return True
+        equity = self.cash
+        gross_exposure = 0.0
+        for held_symbol, position in self.positions.items():
+            spec = self.instrument_specs.get(held_symbol)
+            held_multiplier = spec.multiplier if spec and spec.multiplier else 1.0
+            price = (
+                fill_price
+                if held_symbol == symbol
+                else self._last_prices.get(
+                    held_symbol,
+                    position.settlement_price or position.avg_price,
+                )
+            )
+            quantity = (
+                projected_quantity if held_symbol == symbol else position.quantity
+            )
+            if spec and spec.asset_class == "future":
+                if position.settlement_price is not None:
+                    equity += (
+                        price - position.settlement_price
+                    ) * position.quantity * held_multiplier
+            else:
+                equity += price * position.quantity * held_multiplier
+            gross_exposure += abs(quantity * price * held_multiplier)
+        if symbol not in self.positions:
+            gross_exposure += abs(projected_quantity * fill_price * multiplier)
+        return equity > 0 and gross_exposure <= equity * self.max_gross_leverage
 
     def _commission_for_order(
         self,

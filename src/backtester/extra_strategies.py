@@ -4,6 +4,7 @@ from typing import Optional
 
 from backtester.strategy import (
     Order,
+    OrderUpdate,
     Strategy,
     _sized_order,
     _validate_sizing,
@@ -47,13 +48,41 @@ class _LongOnlySignalStrategy(Strategy):
     def __init__(self, quantity=None, notional=None, fraction=None):
         self.sizing = _validate_sizing(quantity, notional, fraction)
         self.in_position: set[str] = set()
+        self._state_before_order: dict[int, tuple[str, bool]] = {}
+
+    def on_order_update(self, event: OrderUpdate) -> None:
+        if event.get("reason") == "duplicate_pending_order":
+            return
+        symbol = event.get("symbol")
+        order_id = event.get("order_id")
+        status = event["status"]
+        if status == "pending":
+            if isinstance(order_id, int):
+                self._state_before_order[order_id] = (
+                    symbol,
+                    symbol in self.in_position,
+                )
+            if event.get("action") == "buy":
+                self.in_position.add(symbol)
+            elif event.get("action") == "sell":
+                self.in_position.discard(symbol)
+        elif status == "filled" and event.get("action") == "buy":
+            self._state_before_order.pop(order_id, None)
+            self.in_position.add(symbol)
+        elif status == "filled" and event.get("action") == "sell":
+            self._state_before_order.pop(order_id, None)
+            self.in_position.discard(symbol)
+        elif status in ("rejected", "cancelled", "expired"):
+            previous = self._state_before_order.pop(order_id, None)
+            if previous is not None:
+                previous_symbol, was_in_position = previous
+                if was_in_position:
+                    self.in_position.add(previous_symbol)
+                else:
+                    self.in_position.discard(previous_symbol)
 
     def _order(self, symbol: str, entering: bool) -> Order:
-        if entering:
-            self.in_position.add(symbol)
-            return _sized_order(self.sizing, symbol, "buy")
-        self.in_position.discard(symbol)
-        return _sized_order(self.sizing, symbol, "sell")
+        return _sized_order(self.sizing, symbol, "buy" if entering else "sell")
 
 
 class EmaCrossoverStrategy(_LongOnlySignalStrategy):

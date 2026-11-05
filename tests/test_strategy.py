@@ -1,7 +1,13 @@
 import pytest
 
 from backtester.datafeed import Bar
-from backtester.strategy import SmaCrossoverStrategy
+from backtester.strategy import (
+    BollingerMeanReversionStrategy,
+    BuyAndHoldStrategy,
+    DonchianBreakoutStrategy,
+    OrderTypeOverride,
+    SmaCrossoverStrategy,
+)
 
 
 def _bars(closes, symbol="AAPL"):
@@ -84,3 +90,83 @@ def test_no_cross_returns_none():
     strat.last_slow = 4.0
     bars = _bars([1, 2, 10])
     assert strat.on_bar(bar=bars[-1], history=bars, portfolio=None) is None
+
+
+def test_position_signal_strategy_restores_state_after_rejected_orders():
+    strat = DonchianBreakoutStrategy(entry_period=2, exit_period=1)
+    strat.in_position.add("AAPL")
+
+    strat.on_order_update(
+        {"order_id": 1, "status": "pending", "action": "sell", "symbol": "AAPL"}
+    )
+    assert strat.in_position == set()
+    strat.on_order_update(
+        {
+            "order_id": 1,
+            "status": "rejected",
+            "action": "sell",
+            "symbol": "AAPL",
+            "reason": "portfolio_rejected",
+        }
+    )
+    assert strat.in_position == {"AAPL"}
+
+    strat.in_position.clear()
+    strat.on_order_update(
+        {"order_id": 2, "status": "pending", "action": "buy", "symbol": "AAPL"}
+    )
+    assert strat.in_position == {"AAPL"}
+    strat.on_order_update(
+        {
+            "order_id": 2,
+            "status": "rejected",
+            "action": "buy",
+            "symbol": "AAPL",
+            "reason": "portfolio_rejected",
+        }
+    )
+    assert strat.in_position == set()
+
+
+def test_filled_signal_commits_position_and_duplicate_rejection_is_ignored():
+    strat = BollingerMeanReversionStrategy(period=2)
+    strat.in_position.add("AAPL")
+
+    strat.on_order_update(
+        {
+            "status": "rejected",
+            "action": "buy",
+            "symbol": "AAPL",
+            "reason": "duplicate_pending_order",
+        }
+    )
+    assert strat.in_position == {"AAPL"}
+
+    strat.on_order_update(
+        {"order_id": 2, "status": "pending", "action": "sell", "symbol": "AAPL"}
+    )
+    assert strat.in_position == set()
+    strat.on_order_update(
+        {"order_id": 2, "status": "filled", "action": "sell", "symbol": "AAPL"}
+    )
+    assert strat.in_position == set()
+
+
+def test_buy_and_hold_retries_rejected_entry_and_order_override_forwards_update():
+    inner = BuyAndHoldStrategy(quantity=1)
+    strategy = OrderTypeOverride(inner, "market")
+
+    strategy.on_order_update(
+        {"order_id": 3, "status": "pending", "action": "buy", "symbol": "AAPL"}
+    )
+    strategy.on_order_update(
+        {
+            "order_id": 3,
+            "status": "rejected",
+            "action": "buy",
+            "symbol": "AAPL",
+            "reason": "portfolio_rejected",
+        }
+    )
+
+    assert inner.bought == set()

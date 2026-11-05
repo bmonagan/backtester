@@ -122,11 +122,19 @@ DataFeed (parquet → Bars) → Strategy.on_bar → BacktestEngine → Portfolio
   Ichimoku cloud, and VWAP mean reversion. Their defaults and parameters are
   available through the strategy classes and comparison registry.
 - The engine fills orders queued from the previous bar at the current bar's
-  open, marks to market every bar, and counts fills vs rejects.
+  open, marks to market every bar, and counts fills vs rejects. It records
+  per-order lifecycle events and exposes `cancel_order(order_id)` for
+  outstanding orders. Strategies can reconcile internal position state from
+  `on_order_update` callbacks.
 - `Portfolio` tracks cash, average-cost positions, FIFO realized PnL, and a
   per-bar equity curve. `metrics` derives Sharpe, max drawdown, CAGR, win
   rate from it. `compare` reruns each strategy on a fresh feed so the table
   is apples to apples.
+- Optional `InstrumentSpec` metadata enables contract multipliers, fee and
+  quantity-increment checks, futures variation margin, and an account
+  gross-leverage cap. Enable `strict_instruments=True` to reject symbols with
+  incomplete metadata. This does not supply verified market data, futures
+  expiry/roll schedules, or margin-call liquidation.
 
 `fraction` is sized per order as a share of live equity (buys) or position
 value (sells), capped by available cash. With several symbols held at once,
@@ -140,8 +148,9 @@ will be rejected for insufficient funds.
   at the trigger or better (gaps through fill at the open). Stop orders
   trigger on touch and fill at the open when gapped through. Untriggered
   orders rest good-till-cancel; malformed ones count as rejected.
-- Signals fire once per cross/break; strategy state always advances, so a
-  persistent crossover can't emit a buy every bar.
+- Indicator state advances on each bar so a persistent crossover does not
+  repeatedly emit the same signal. Stateful strategies reconcile position
+  state through pending, fill, rejection, and cancellation callbacks.
 - Realized PnL uses FIFO lots net of commission and slippage, for longs and
   shorts; the trade log keeps raw and effective prices side by side. Shorts
   are opt-in via `allow_shorts` and unavailable by default.
@@ -185,7 +194,7 @@ uv run pytest -q --cov
 uv run python scripts/make_coverage_badge.py
 ```
 
-174 tests: strategy signals and validation, long/short accounting, limit
+239 tests: strategy signals and validation, long/short accounting, limit
 and stop fills, notional/fraction sizing, costs and realized PnL,
 multi-ticker feeds, engine fills, metrics math, demo-data determinism,
 sample/table reproducibility, CLI and comparison harness.

@@ -1,10 +1,11 @@
 # engine.py
 import math
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Literal
 
 from backtester.instruments import InstrumentSpec
 from backtester.portfolio import Portfolio
+from backtester.strategy import OrderUpdate
 
 if TYPE_CHECKING:
     from backtester.datafeed import Bar
@@ -17,6 +18,7 @@ class BacktestEngine:
         allow_shorts: bool = False,
         instrument_specs: dict[str, InstrumentSpec] | None = None,
         strict_instruments: bool = False,
+        max_gross_leverage: float | None = None,
     ):
         self.feed = feed
         self.strategy = strategy
@@ -24,6 +26,7 @@ class BacktestEngine:
             starting_cash, commission=commission,
             slippage_bps=slippage_bps, allow_shorts=allow_shorts,
             instrument_specs=instrument_specs,
+            max_gross_leverage=max_gross_leverage,
         )
         self.instrument_specs = instrument_specs or {}
         self.strict_instruments = strict_instruments
@@ -32,11 +35,15 @@ class BacktestEngine:
         self.history: Dict[str, List["Bar"]] = defaultdict(list)
         self.latest_prices: Dict[str, float] = {}
         self.pending_orders: List[Any] = []
+        self.order_events: list[OrderUpdate] = []
         self.n_fills: int = 0
         self.n_rejected: int = 0
+        self._next_order_id = 1
+        self._current_timestamp: object | None = None
 
     def run(self) -> Portfolio:
         for bar in self.feed:
+            self._current_timestamp = bar.timestamp
             if self.strict_instruments:
                 spec = self.instrument_specs.get(bar.symbol)
                 if spec is None:
@@ -53,7 +60,7 @@ class BacktestEngine:
             # 3. Mark portfolio to market with current prices
             self.portfolio.mark_to_market(bar.timestamp, self.latest_prices)
 
-            # 4. Generate orders for next bar (strategy manages its own internal state)
+            # 4. Generate next-bar orders; lifecycle callbacks reconcile position state.
             order = self.strategy.on_bar(
                 bar=bar,
                 history=self.history[bar.symbol],
@@ -61,9 +68,81 @@ class BacktestEngine:
             )
 
             if order:
-                self.pending_orders.append(order)
+                self._queue_order(order, bar.timestamp)
 
         return self.portfolio
+
+    def _notify_order_update(self, event: OrderUpdate) -> None:
+        callback = getattr(self.strategy, "on_order_update", None)
+        if callable(callback):
+            callback(event)
+
+    def _record_order_event(
+        self,
+        order: dict[str, Any],
+        status: Literal["pending", "filled", "rejected", "cancelled", "expired"],
+        timestamp: object | None,
+        *,
+        reason: str | None = None,
+        fill_price: float | None = None,
+        quantity: float | None = None,
+    ) -> OrderUpdate:
+        event = {
+            "order_id": order["order_id"],
+            "symbol": order.get("symbol"),
+            "action": order.get("action"),
+            "status": status,
+            "timestamp": timestamp,
+            "reason": reason,
+            "fill_price": fill_price,
+            "quantity": quantity,
+        }
+        self.order_events.append(event)
+        self._notify_order_update(event)
+        return event
+
+    def _queue_order(self, order: Any, timestamp: object) -> None:
+        order_id = self._next_order_id
+        self._next_order_id += 1
+        if (
+            not isinstance(order, dict)
+            or not isinstance(order.get("symbol"), str)
+            or not order["symbol"].strip()
+            or order.get("action") not in ("buy", "sell")
+        ):
+            malformed = {
+                "order_id": order_id,
+                "symbol": order.get("symbol") if isinstance(order, dict) else None,
+                "action": order.get("action") if isinstance(order, dict) else None,
+            }
+            self.n_rejected += 1
+            self._record_order_event(
+                malformed, "rejected", timestamp, reason="malformed_order"
+            )
+            return
+        queued = dict(order)
+        queued["order_id"] = order_id
+        if any(item.get("symbol") == queued["symbol"] for item in self.pending_orders):
+            self.n_rejected += 1
+            self._record_order_event(
+                queued, "rejected", timestamp, reason="duplicate_pending_order"
+            )
+            return
+        self.pending_orders.append(queued)
+        self._record_order_event(queued, "pending", timestamp)
+
+    def cancel_order(self, order_id: int) -> bool:
+        for index, order in enumerate(self.pending_orders):
+            if order["order_id"] == order_id:
+                self.pending_orders.pop(index)
+                self._record_order_event(
+                    order,
+                    "cancelled",
+                    self._current_timestamp,
+                    reason="user_cancelled",
+                )
+                return True
+        return False
 
     @staticmethod
     def _direction(order) -> int | None:
@@ -177,6 +256,9 @@ class BacktestEngine:
             fill = self._trigger_price(order, current_bar)
             if isinstance(fill, str):
                 self.n_rejected += 1
+                self._record_order_event(
+                    order, "rejected", current_bar.timestamp, reason="invalid_order"
+                )
                 continue
             if fill is None:
                 # resting limit/stop, not touched yet
@@ -198,6 +280,9 @@ class BacktestEngine:
             )
             if isinstance(shares, str):
                 self.n_rejected += 1
+                self._record_order_event(
+                    order, "rejected", current_bar.timestamp, reason="invalid_size"
+                )
                 continue
             ok = self.portfolio.execute_order(
                 timestamp=current_bar.timestamp,
@@ -207,6 +292,21 @@ class BacktestEngine:
             )
             if ok:
                 self.n_fills += 1
+                self._record_order_event(
+                    order,
+                    "filled",
+                    current_bar.timestamp,
+                    fill_price=fill,
+                    quantity=shares,
+                )
             else:
                 self.n_rejected += 1
+                self._record_order_event(
+                    order,
+                    "rejected",
+                    current_bar.timestamp,
+                    reason="portfolio_rejected",
+                    fill_price=fill,
+                    quantity=shares,
+                )
         self.pending_orders = remaining_orders

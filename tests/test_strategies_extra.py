@@ -11,11 +11,24 @@ def _bars(closes, symbol="AAPL"):
     ]
 
 
+def _fill(strategy, order, order_id):
+    if order is not None:
+        event = {
+            "order_id": order_id,
+            "symbol": order["symbol"],
+            "action": order["action"],
+        }
+        strategy.on_order_update({**event, "status": "pending"})
+        strategy.on_order_update({**event, "status": "filled"})
+    return order
+
+
 def test_buy_and_hold_fires_once():
     s = BuyAndHoldStrategy(quantity=5)
     bars = _bars([10, 11, 12])
     o0 = s.on_bar(bar=bars[0], history=bars[:1], portfolio=None)
     assert o0 is not None and o0["quantity"] == 5
+    _fill(s, o0, 1)
     assert s.on_bar(bar=bars[1], history=bars[:2], portfolio=None) is None
     assert s.on_bar(bar=bars[2], history=bars[:3], portfolio=None) is None
 
@@ -24,7 +37,9 @@ def test_buy_and_hold_buys_each_symbol_once():
     s = BuyAndHoldStrategy(quantity=5)
     a = _bars([10, 11], symbol="AAPL")
     m = _bars([20, 21], symbol="MSFT")
-    assert s.on_bar(bar=a[0], history=a[:1], portfolio=None) is not None
+    order = s.on_bar(bar=a[0], history=a[:1], portfolio=None)
+    assert order is not None
+    _fill(s, order, 1)
     assert s.on_bar(bar=m[0], history=m[:1], portfolio=None) is not None
     assert s.on_bar(bar=a[1], history=a, portfolio=None) is None
 
