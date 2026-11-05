@@ -136,6 +136,39 @@ DataFeed (parquet → Bars) → Strategy.on_bar → BacktestEngine → Portfolio
   incomplete metadata. This does not supply verified market data, futures
   expiry/roll schedules, or margin-call liquidation.
 
+Execution assumptions can be set per symbol through `execution_models`:
+
+```python
+from backtester import BacktestEngine, ExecutionCostModel
+
+engine = BacktestEngine(
+    feed,
+    strategy,
+    starting_cash=100_000,
+    execution_models={
+        "AAPL": ExecutionCostModel(
+            half_spread_bps=2,
+            slippage_bps=3,
+            impact_bps_at_full_participation=20,
+            max_participation_rate=0.05,
+            scenario="adverse",
+        )
+    },
+)
+portfolio = engine.run()
+print(portfolio.cost_totals)
+```
+
+Spread and modeled slippage are charged adversely by order side. Impact scales
+linearly with fill participation in bar volume; a participation cap can split
+an order into partial fills. Orders may set `max_wait_bars` to expire after
+that many eligible symbol bars; otherwise they remain good-till-cancelled.
+Scenarios scale spread, modeled slippage, and impact by 1.0 (base), 1.5
+(adverse), or 2.5 (severe). These configurable assumptions are not calibrated
+market forecasts. Cost totals attribute commission, spread, slippage, and
+impact, but the comparison/reporting layer does not yet produce gross/net
+scenario leaderboards.
+
 `fraction` is sized per order as a share of live equity (buys) or position
 value (sells), capped by available cash. With several symbols held at once,
 keep `fraction × expected concurrent positions` at or below 1 or later buys
@@ -147,10 +180,11 @@ will be rejected for insufficient funds.
 - Market orders fill at the open. Limit orders rest until touched and fill
   at the trigger or better (gaps through fill at the open). Stop orders
   trigger on touch and fill at the open when gapped through. Untriggered
-  orders rest good-till-cancel; malformed ones count as rejected.
+  orders rest good-till-cancel unless `max_wait_bars` is set; malformed ones
+  count as rejected.
 - Indicator state advances on each bar so a persistent crossover does not
   repeatedly emit the same signal. Stateful strategies reconcile position
-  state through pending, fill, rejection, and cancellation callbacks.
+  state through pending, partial-fill, and terminal order callbacks.
 - Realized PnL uses FIFO lots net of commission and slippage, for longs and
   shorts; the trade log keeps raw and effective prices side by side. Shorts
   are opt-in via `allow_shorts` and unavailable by default.
@@ -165,6 +199,9 @@ will be rejected for insufficient funds.
 
 - Daily bars. No intraday, no partial intrabar sequencing beyond OHLC
   trigger checks, no margin calls on shorts.
+- Execution cost inputs are configurable rather than empirically calibrated;
+  no volatility/liquidity-dependent spread model, venue-specific maker/taker
+  schedule, futures roll execution, or crypto funding is included yet.
 - The sample parquet is git-ignored; tests needing it skip in CI. Run
   `scripts/make_demo_data.py` for an offline demo or bring your own data
   via the fetch script.

@@ -146,6 +146,28 @@ screen as an explicitly exploratory baseline; do not overwrite its CSV.
 - **Acceptance:** cost-free parity preserves the current engine's documented
   fills; synthetic tests assert each cost component and adverse gap behavior.
 
+#### Phase 4 progress
+
+Implemented so far:
+
+- Instrument fee schedules and per-trade/aggregate commission attribution are
+  available in the ledger.
+- Per-symbol execution profiles add half-spread, modeled slippage, linear
+  participation-scaled impact, and base/adverse/severe multipliers.
+- A configured participation cap permits multi-bar partial fills with a stable
+  order ID; optional `max_wait_bars` expires unfilled remainder.
+- Order callbacks report actual position quantity, and built-in stateful
+  strategies reconcile partial and terminal updates against the ledger.
+- Synthetic tests verify cost-free parity, component attribution, adverse
+  stop-gap costs, capped partial fills, and expiry.
+
+Phase 4 remains incomplete. The assumptions are not calibrated by market,
+venue, volatility, or liquidity; scenarios are not run automatically through
+the comparison/reporting layer; maker/taker schedules, futures roll execution,
+and crypto funding remain unsupported. Cost attribution exists, but gross/net
+scenario leaderboards and funding/roll attribution do not. This increment
+therefore does not make the frozen ranking market-realistic or production-ready.
+
 ### Phase 5 — Return and risk reporting
 
 - Calculate daily strategy equity returns as `equity[t] / equity[t-1] - 1`
