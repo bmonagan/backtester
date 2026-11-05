@@ -23,23 +23,23 @@ def _complete_future(**overrides):
     return InstrumentSpec(**values)
 
 
-def test_complete_future_metadata_is_execution_ready():
+def test_complete_future_metadata_is_complete():
     spec = _complete_future()
 
-    assert spec.execution_ready
+    assert spec.metadata_complete
     assert spec.multiplier == 50.0
     assert spec.contract_size == 1.0
     assert spec.margin_schedule.initial == 12000.0
 
 
-def test_missing_market_conventions_are_not_execution_ready():
+def test_missing_market_conventions_are_incomplete():
     spec = InstrumentSpec(
         symbol="AAPL",
         asset_class="equity",
         quote_currency="USD",
     )
 
-    assert not spec.execution_ready
+    assert not spec.metadata_complete
 
 
 @pytest.mark.parametrize(
@@ -66,10 +66,10 @@ def test_instrument_rejects_mismatched_fee_currency():
         _complete_future(fee_schedule=FeeSchedule(currency="EUR"))
 
 
-def test_future_requires_margin_for_execution_readiness():
+def test_future_requires_margin_for_complete_metadata():
     spec = _complete_future(margin_schedule=None)
 
-    assert not spec.execution_ready
+    assert not spec.metadata_complete
 
 
 def test_future_metadata_rejects_invalid_margin_schedule():

@@ -31,6 +31,7 @@ def _validate_currency(currency: str) -> None:
     if (
         not isinstance(currency, str)
         or len(currency) != 3
+        or not currency.isascii()
         or not currency.isalpha()
         or currency.upper() != currency
     ):
@@ -125,7 +126,7 @@ class InstrumentSpec:
             raise ValueError("margin schedule currency must match quote_currency")
 
     @property
-    def execution_ready(self) -> bool:
+    def metadata_complete(self) -> bool:
         required = (
             self.tick_size,
             self.quantity_increment,

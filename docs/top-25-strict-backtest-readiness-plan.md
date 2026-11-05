@@ -211,7 +211,8 @@ recommendation.
 
 - Added immutable, validated `InstrumentSpec`, `FeeSchedule`, and
   `MarginSchedule` metadata types. Unknown market conventions remain
-  explicit; incomplete metadata cannot be reported as execution-ready.
+  explicit; metadata completeness is not yet a claim that the engine can
+  execute or account for that instrument.
 - **Still outstanding:** no symbol metadata registry or instrument-aware
   ledger behavior is wired in yet. Futures contract history, corporate
   actions, and venue-specific crypto assumptions remain unmodeled. Existing
