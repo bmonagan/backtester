@@ -62,6 +62,12 @@ class Portfolio:
         self.positions: dict[str, Position] = {}
         self.equity_curve: list[tuple] = []  # (timestamp, equity)
         self.trade_log: list[dict] = []
+        self.cost_totals: dict[str, float] = {
+            "commission": 0.0,
+            "spread": 0.0,
+            "slippage": 0.0,
+            "impact": 0.0,
+        }
         self.history: list[PortfolioSnapshot] = []
         self.realized_pnl: float = 0.0
         # symbol -> [[qty, per_share_basis]] (long lots, qty > 0)
@@ -131,6 +137,8 @@ class Portfolio:
         self, timestamp, symbol: str, quantity: float, fill_price: float,
         commission: float | None = None,
         slippage_bps: float | None = None,
+        spread_bps: float = 0.0,
+        impact_bps: float = 0.0,
     ) -> bool:
         """Update cash/positions, append to trade_log."""
         if quantity == 0:
@@ -144,7 +152,10 @@ class Portfolio:
         comm = self._commission_for_order(
             quantity, fill_price, spec, commission
         )
-        eff = self._effective_price(quantity, fill_price, slippage_bps)
+        slippage = self.slippage_bps if slippage_bps is None else slippage_bps
+        eff = self._effective_price(
+            quantity, fill_price, slippage + spread_bps + impact_bps
+        )
         pos = self.positions.get(symbol)
         pos_qty = pos.quantity if pos else 0.0
         multiplier = spec.multiplier if spec and spec.multiplier else 1.0
@@ -154,7 +165,17 @@ class Portfolio:
             return False
         if spec and spec.asset_class == "future":
             return self._execute_future_order(
-                timestamp, symbol, quantity, fill_price, eff, comm, spec, pos
+                timestamp,
+                symbol,
+                quantity,
+                fill_price,
+                eff,
+                comm,
+                spec,
+                pos,
+                slippage,
+                spread_bps,
+                impact_bps,
             )
         # 1. Buying (covers shorts first, then opens/extends long)
         if quantity > 0:
@@ -277,10 +298,43 @@ class Portfolio:
             "fill_price": fill_price,
             "effective_price": eff,
             "commission": comm,
+            "spread_cost": self._execution_cost(
+                quantity, fill_price, spec, spread_bps
+            ),
+            "slippage_cost": self._execution_cost(
+                quantity, fill_price, spec, slippage
+            ),
+            "impact_cost": self._execution_cost(
+                quantity, fill_price, spec, impact_bps
+            ),
             "realized_pnl": realized,
             "cash_balance": self.cash,
         })
+        self._record_costs(
+            comm,
+            self._execution_cost(quantity, fill_price, spec, spread_bps),
+            self._execution_cost(quantity, fill_price, spec, slippage),
+            self._execution_cost(quantity, fill_price, spec, impact_bps),
+        )
         return True
+
+    @staticmethod
+    def _execution_cost(
+        quantity: float,
+        fill_price: float,
+        spec: InstrumentSpec | None,
+        basis_points: float,
+    ) -> float:
+        multiplier = spec.multiplier if spec and spec.multiplier else 1.0
+        return abs(quantity) * fill_price * multiplier * basis_points / 10000.0
+
+    def _record_costs(
+        self, commission: float, spread: float, slippage: float, impact: float
+    ) -> None:
+        self.cost_totals["commission"] += commission
+        self.cost_totals["spread"] += spread
+        self.cost_totals["slippage"] += slippage
+        self.cost_totals["impact"] += impact
 
     def _within_gross_leverage(
         self, symbol: str, projected_quantity: float, fill_price: float, multiplier: float
@@ -346,6 +400,9 @@ class Portfolio:
         commission: float,
         spec: InstrumentSpec,
         position: Position | None,
+        slippage_bps: float,
+        spread_bps: float,
+        impact_bps: float,
     ) -> bool:
         if spec.margin_schedule is None or spec.multiplier is None:
             raise ValueError(f"{symbol} futures metadata requires multiplier and margin")
@@ -402,9 +459,24 @@ class Portfolio:
                 "fill_price": fill_price,
                 "effective_price": effective_price,
                 "commission": commission,
+                "spread_cost": self._execution_cost(
+                    quantity, fill_price, spec, spread_bps
+                ),
+                "slippage_cost": self._execution_cost(
+                    quantity, fill_price, spec, slippage_bps
+                ),
+                "impact_cost": self._execution_cost(
+                    quantity, fill_price, spec, impact_bps
+                ),
                 "realized_pnl": realized,
                 "cash_balance": self.cash,
             }
+        )
+        self._record_costs(
+            commission,
+            self._execution_cost(quantity, fill_price, spec, spread_bps),
+            self._execution_cost(quantity, fill_price, spec, slippage_bps),
+            self._execution_cost(quantity, fill_price, spec, impact_bps),
         )
         return True
 

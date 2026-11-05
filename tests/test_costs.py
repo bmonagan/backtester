@@ -2,6 +2,7 @@ import pytest
 
 from backtester.datafeed import Bar
 from backtester.engine import BacktestEngine
+from backtester.instruments import FeeSchedule, InstrumentSpec
 from backtester.portfolio import Portfolio
 
 
@@ -30,6 +31,37 @@ def test_realized_pnl_simple_roundtrip():
     p.execute_order(timestamp="t1", symbol="AAPL", quantity=-10, fill_price=7.0)
     assert p.trade_log[-1]["realized_pnl"] == pytest.approx(20.0)
     assert p.realized_pnl == pytest.approx(20.0)
+
+
+def test_portfolio_records_fee_spread_slippage_and_impact_attribution():
+    spec = InstrumentSpec(
+        symbol="AAPL",
+        asset_class="equity",
+        quote_currency="USD",
+        multiplier=1.0,
+        fee_schedule=FeeSchedule(currency="USD", per_unit=0.2),
+    )
+    portfolio = Portfolio(10_000.0, instrument_specs={"AAPL": spec})
+
+    assert portfolio.execute_order(
+        "t0",
+        "AAPL",
+        10,
+        100.0,
+        slippage_bps=10.0,
+        spread_bps=5.0,
+        impact_bps=15.0,
+    )
+
+    trade = portfolio.trade_log[0]
+    assert trade["effective_price"] == pytest.approx(100.30)
+    assert trade["commission"] == pytest.approx(2.0)
+    assert trade["spread_cost"] == pytest.approx(0.5)
+    assert trade["slippage_cost"] == pytest.approx(1.0)
+    assert trade["impact_cost"] == pytest.approx(1.5)
+    assert portfolio.cost_totals == pytest.approx(
+        {"commission": 2.0, "spread": 0.5, "slippage": 1.0, "impact": 1.5}
+    )
 
 
 def test_engine_counts_rejected():

@@ -5,6 +5,53 @@ from math import isfinite
 from typing import Literal
 
 AssetClass = Literal["equity", "future", "crypto"]
+CostScenario = Literal["base", "adverse", "severe"]
+
+
+@dataclass(frozen=True)
+class ExecutionCostModel:
+    """Conservative per-fill execution assumptions; not a calibrated forecast."""
+
+    half_spread_bps: float = 0.0
+    slippage_bps: float = 0.0
+    impact_bps_at_full_participation: float = 0.0
+    max_participation_rate: float | None = None
+    scenario: CostScenario = "base"
+
+    def __post_init__(self) -> None:
+        for name in (
+            "half_spread_bps",
+            "slippage_bps",
+            "impact_bps_at_full_participation",
+        ):
+            _validate_nonnegative(name, getattr(self, name))
+        if self.max_participation_rate is not None and (
+            isinstance(self.max_participation_rate, bool)
+            or not isinstance(self.max_participation_rate, (int, float))
+            or not isfinite(self.max_participation_rate)
+            or not 0 < self.max_participation_rate <= 1
+        ):
+            raise ValueError("max_participation_rate must be in (0, 1]")
+        if self.scenario not in ("base", "adverse", "severe"):
+            raise ValueError("scenario must be base, adverse, or severe")
+
+    @property
+    def scenario_multiplier(self) -> float:
+        return {"base": 1.0, "adverse": 1.5, "severe": 2.5}[self.scenario]
+
+    def impact_bps(self, participation_rate: float) -> float:
+        if (
+            isinstance(participation_rate, bool)
+            or not isinstance(participation_rate, (int, float))
+            or not isfinite(participation_rate)
+            or participation_rate < 0
+        ):
+            raise ValueError("participation_rate must be finite and nonnegative")
+        return (
+            self.impact_bps_at_full_participation
+            * min(participation_rate, 1.0)
+            * self.scenario_multiplier
+        )
 
 
 def _validate_positive(name: str, value: float | None) -> None:

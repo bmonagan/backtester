@@ -1,6 +1,11 @@
 import pytest
 
-from backtester.instruments import FeeSchedule, InstrumentSpec, MarginSchedule
+from backtester.instruments import (
+    ExecutionCostModel,
+    FeeSchedule,
+    InstrumentSpec,
+    MarginSchedule,
+)
 
 
 def _complete_future(**overrides):
@@ -88,3 +93,36 @@ def test_future_metadata_rejects_invalid_margin_schedule():
 def test_fee_schedule_rejects_invalid_fees(value):
     with pytest.raises(ValueError):
         FeeSchedule(currency="USD", per_unit=value)
+
+
+def test_execution_cost_scenario_scales_spread_and_impact():
+    model = ExecutionCostModel(
+        half_spread_bps=2.0,
+        slippage_bps=3.0,
+        impact_bps_at_full_participation=20.0,
+        scenario="adverse",
+    )
+
+    assert model.scenario_multiplier == 1.5
+    assert model.impact_bps(0.25) == pytest.approx(7.5)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"half_spread_bps": -1},
+        {"slippage_bps": float("nan")},
+        {"impact_bps_at_full_participation": float("inf")},
+        {"max_participation_rate": 0},
+        {"max_participation_rate": 1.1},
+        {"scenario": "optimistic"},
+    ],
+)
+def test_execution_cost_model_rejects_invalid_configuration(kwargs):
+    with pytest.raises(ValueError):
+        ExecutionCostModel(**kwargs)
+
+
+def test_execution_impact_rejects_invalid_participation():
+    with pytest.raises(ValueError, match="participation_rate"):
+        ExecutionCostModel().impact_bps(float("nan"))
