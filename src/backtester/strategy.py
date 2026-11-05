@@ -14,17 +14,21 @@ class Order(TypedDict):
     fraction: NotRequired[float | None]
     order_type: NotRequired[Literal["market", "limit", "stop"]]
     price: NotRequired[float | None]
+    max_wait_bars: NotRequired[int | None]
 
 
 class OrderUpdate(TypedDict):
     order_id: int
     symbol: str | None
     action: str | None
-    status: Literal["pending", "filled", "rejected", "cancelled", "expired"]
+    status: Literal[
+        "pending", "partial_fill", "filled", "rejected", "cancelled", "expired"
+    ]
     timestamp: object | None
     reason: str | None
     fill_price: float | None
     quantity: float | None
+    position_quantity: float | None
 
 
 def _validate_sizing(quantity=None, notional=None, fraction=None) -> dict:
@@ -82,7 +86,7 @@ class Strategy(ABC):
         ...
 
     def on_order_update(self, _event: OrderUpdate) -> None:
-        """Receive pending and terminal order lifecycle updates."""
+        """Receive pending, partial-fill, and terminal order lifecycle updates."""
         del _event
 
 
@@ -144,15 +148,29 @@ class _PositionSignalStrategy(Strategy):
                 self.in_position.add(symbol)
             elif event.get("action") == "sell":
                 self.in_position.discard(symbol)
-        elif status == "filled" and event.get("action") == "buy":
-            self._state_before_order.pop(order_id, None)
-            self.in_position.add(symbol)
-        elif event["status"] == "filled" and event.get("action") == "sell":
-            self._state_before_order.pop(order_id, None)
-            self.in_position.discard(symbol)
-        elif status in ("rejected", "cancelled", "expired"):
+        elif status == "partial_fill":
+            if event.get("position_quantity", 0.0) != 0:
+                self.in_position.add(symbol)
+            else:
+                self.in_position.discard(symbol)
+            if isinstance(order_id, int):
+                self._state_before_order[order_id] = (
+                    symbol,
+                    symbol in self.in_position,
+                )
+        elif status in ("filled", "rejected", "cancelled", "expired"):
             previous = self._state_before_order.pop(order_id, None)
-            if previous is not None:
+            position_quantity = event.get("position_quantity")
+            if position_quantity is not None:
+                if position_quantity != 0:
+                    self.in_position.add(symbol)
+                else:
+                    self.in_position.discard(symbol)
+            elif status == "filled" and event.get("action") == "buy":
+                self.in_position.add(symbol)
+            elif status == "filled" and event.get("action") == "sell":
+                self.in_position.discard(symbol)
+            elif previous is not None:
                 previous_symbol, was_in_position = previous
                 if was_in_position:
                     self.in_position.add(previous_symbol)
@@ -237,12 +255,27 @@ class BuyAndHoldStrategy(Strategy):
                 self._state_before_order[order_id] = (symbol, symbol in self.bought)
             if event.get("action") == "buy":
                 self.bought.add(symbol)
-        elif event["status"] == "filled" and event.get("action") == "buy":
-            self._state_before_order.pop(order_id, None)
-            self.bought.add(symbol)
-        elif event["status"] in ("rejected", "cancelled", "expired"):
+        elif event["status"] == "partial_fill":
+            if event.get("position_quantity", 0.0) != 0:
+                self.bought.add(symbol)
+            else:
+                self.bought.discard(symbol)
+            if isinstance(order_id, int):
+                self._state_before_order[order_id] = (
+                    symbol,
+                    symbol in self.bought,
+                )
+        elif event["status"] in ("filled", "rejected", "cancelled", "expired"):
             previous = self._state_before_order.pop(order_id, None)
-            if previous is not None:
+            position_quantity = event.get("position_quantity")
+            if position_quantity is not None:
+                if position_quantity != 0:
+                    self.bought.add(symbol)
+                else:
+                    self.bought.discard(symbol)
+            elif event["status"] == "filled" and event.get("action") == "buy":
+                self.bought.add(symbol)
+            elif previous is not None:
                 previous_symbol, was_bought = previous
                 if was_bought:
                     self.bought.add(previous_symbol)

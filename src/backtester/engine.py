@@ -3,7 +3,7 @@ import math
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Dict, List, Literal
 
-from backtester.instruments import InstrumentSpec
+from backtester.instruments import ExecutionCostModel, InstrumentSpec
 from backtester.portfolio import Portfolio
 from backtester.strategy import OrderUpdate
 
@@ -19,6 +19,7 @@ class BacktestEngine:
         instrument_specs: dict[str, InstrumentSpec] | None = None,
         strict_instruments: bool = False,
         max_gross_leverage: float | None = None,
+        execution_models: dict[str, ExecutionCostModel] | None = None,
     ):
         self.feed = feed
         self.strategy = strategy
@@ -29,6 +30,7 @@ class BacktestEngine:
             max_gross_leverage=max_gross_leverage,
         )
         self.instrument_specs = instrument_specs or {}
+        self.execution_models = execution_models or {}
         self.strict_instruments = strict_instruments
 
         # History segregated per symbol for clean multi-asset support
@@ -80,12 +82,15 @@ class BacktestEngine:
     def _record_order_event(
         self,
         order: dict[str, Any],
-        status: Literal["pending", "filled", "rejected", "cancelled", "expired"],
+        status: Literal[
+            "pending", "partial_fill", "filled", "rejected", "cancelled", "expired"
+        ],
         timestamp: object | None,
         *,
         reason: str | None = None,
         fill_price: float | None = None,
         quantity: float | None = None,
+        position_quantity: float | None = None,
     ) -> OrderUpdate:
         event = {
             "order_id": order["order_id"],
@@ -96,6 +101,7 @@ class BacktestEngine:
             "reason": reason,
             "fill_price": fill_price,
             "quantity": quantity,
+            "position_quantity": position_quantity,
         }
         self.order_events.append(event)
         self._notify_order_update(event)
@@ -122,6 +128,18 @@ class BacktestEngine:
             return
         queued = dict(order)
         queued["order_id"] = order_id
+        max_wait_bars = queued.get("max_wait_bars")
+        if max_wait_bars is not None and (
+            isinstance(max_wait_bars, bool)
+            or not isinstance(max_wait_bars, int)
+            or max_wait_bars < 1
+        ):
+            self.n_rejected += 1
+            self._record_order_event(
+                queued, "rejected", timestamp, reason="invalid_expiration"
+            )
+            return
+        queued["_bars_waited"] = 0
         if any(item.get("symbol") == queued["symbol"] for item in self.pending_orders):
             self.n_rejected += 1
             self._record_order_event(
@@ -140,9 +158,30 @@ class BacktestEngine:
                     "cancelled",
                     self._current_timestamp,
                     reason="user_cancelled",
+                    position_quantity=self._position_quantity(order["symbol"]),
                 )
                 return True
         return False
+
+    def _position_quantity(self, symbol: str) -> float:
+        position = self.portfolio.positions.get(symbol)
+        return position.quantity if position else 0.0
+
+    def _wait_or_expire(
+        self, order: dict[str, Any], timestamp: object, remaining_orders: list[Any]
+    ) -> None:
+        order["_bars_waited"] += 1
+        max_wait = order.get("max_wait_bars")
+        if max_wait is not None and order["_bars_waited"] >= max_wait:
+            self._record_order_event(
+                order,
+                "expired",
+                timestamp,
+                reason="max_wait_bars",
+                position_quantity=self._position_quantity(order["symbol"]),
+            )
+        else:
+            remaining_orders.append(order)
 
     @staticmethod
     def _direction(order) -> int | None:
@@ -262,7 +301,7 @@ class BacktestEngine:
                 continue
             if fill is None:
                 # resting limit/stop, not touched yet
-                remaining_orders.append(order)
+                self._wait_or_expire(order, current_bar.timestamp, remaining_orders)
                 continue
             try:
                 equity = self.portfolio.current_equity(self.latest_prices)
@@ -272,33 +311,81 @@ class BacktestEngine:
             multiplier = spec.multiplier if spec and spec.multiplier else 1.0
             held = self.portfolio.positions.get(order["symbol"])
             position_qty = held.quantity if held else 0.0
-            shares = self._resolve_shares(
-                order, fill * multiplier, equity, position_qty,
-                cash=self.portfolio.cash,
-                commission=self.portfolio.commission,
-                slippage_bps=self.portfolio.slippage_bps,
-            )
+            if "quantity" in order and order.get("_resolved_quantity"):
+                shares = float(order["quantity"])
+            else:
+                shares = self._resolve_shares(
+                    order, fill * multiplier, equity, position_qty,
+                    cash=self.portfolio.cash,
+                    commission=self.portfolio.commission,
+                    slippage_bps=self.portfolio.slippage_bps,
+                )
             if isinstance(shares, str):
                 self.n_rejected += 1
                 self._record_order_event(
                     order, "rejected", current_bar.timestamp, reason="invalid_size"
                 )
                 continue
+
+            model = self.execution_models.get(order["symbol"], ExecutionCostModel())
+            requested_shares = shares
+            if not order.get("_resolved_quantity"):
+                order["quantity"] = shares
+                order["_resolved_quantity"] = True
+                order.pop("notional", None)
+                order.pop("fraction", None)
+            fill_quantity = self._participation_fill_quantity(
+                shares,
+                current_bar.volume,
+                model,
+                spec.quantity_increment if spec else None,
+            )
+            if fill_quantity == 0:
+                self._wait_or_expire(order, current_bar.timestamp, remaining_orders)
+                continue
+            participation_rate = (
+                abs(fill_quantity) / current_bar.volume
+                if current_bar.volume > 0
+                else 0.0
+            )
+            spread_bps = model.half_spread_bps * model.scenario_multiplier
+            slippage_bps = (
+                self.portfolio.slippage_bps
+                + model.slippage_bps * model.scenario_multiplier
+            )
+            impact_bps = model.impact_bps(participation_rate)
             ok = self.portfolio.execute_order(
                 timestamp=current_bar.timestamp,
                 symbol=order["symbol"],
-                quantity=shares,
+                quantity=fill_quantity,
                 fill_price=fill,
+                slippage_bps=slippage_bps,
+                spread_bps=spread_bps,
+                impact_bps=impact_bps,
             )
             if ok:
                 self.n_fills += 1
-                self._record_order_event(
-                    order,
-                    "filled",
-                    current_bar.timestamp,
-                    fill_price=fill,
-                    quantity=shares,
-                )
+                remaining_quantity = requested_shares - fill_quantity
+                if abs(remaining_quantity) > 1e-12:
+                    order["quantity"] = remaining_quantity
+                    self._record_order_event(
+                        order,
+                        "partial_fill",
+                        current_bar.timestamp,
+                        fill_price=fill,
+                        quantity=fill_quantity,
+                        position_quantity=self._position_quantity(order["symbol"]),
+                    )
+                    self._wait_or_expire(order, current_bar.timestamp, remaining_orders)
+                else:
+                    self._record_order_event(
+                        order,
+                        "filled",
+                        current_bar.timestamp,
+                        fill_price=fill,
+                        quantity=fill_quantity,
+                        position_quantity=self._position_quantity(order["symbol"]),
+                    )
             else:
                 self.n_rejected += 1
                 self._record_order_event(
@@ -307,6 +394,25 @@ class BacktestEngine:
                     current_bar.timestamp,
                     reason="portfolio_rejected",
                     fill_price=fill,
-                    quantity=shares,
+                    quantity=fill_quantity,
+                    position_quantity=self._position_quantity(order["symbol"]),
                 )
         self.pending_orders = remaining_orders
+
+    @staticmethod
+    def _participation_fill_quantity(
+        requested_quantity: float,
+        volume: float,
+        model: ExecutionCostModel,
+        quantity_increment: float | None,
+    ) -> float:
+        rate = model.max_participation_rate
+        if rate is None:
+            return requested_quantity
+        if volume <= 0:
+            return 0.0
+        maximum = volume * rate
+        if quantity_increment is not None:
+            maximum = math.floor(maximum / quantity_increment) * quantity_increment
+        quantity = min(abs(requested_quantity), maximum)
+        return math.copysign(quantity, requested_quantity)

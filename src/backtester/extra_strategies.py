@@ -66,15 +66,29 @@ class _LongOnlySignalStrategy(Strategy):
                 self.in_position.add(symbol)
             elif event.get("action") == "sell":
                 self.in_position.discard(symbol)
-        elif status == "filled" and event.get("action") == "buy":
-            self._state_before_order.pop(order_id, None)
-            self.in_position.add(symbol)
-        elif status == "filled" and event.get("action") == "sell":
-            self._state_before_order.pop(order_id, None)
-            self.in_position.discard(symbol)
-        elif status in ("rejected", "cancelled", "expired"):
+        elif status == "partial_fill":
+            if event.get("position_quantity", 0.0) != 0:
+                self.in_position.add(symbol)
+            else:
+                self.in_position.discard(symbol)
+            if isinstance(order_id, int):
+                self._state_before_order[order_id] = (
+                    symbol,
+                    symbol in self.in_position,
+                )
+        elif status in ("filled", "rejected", "cancelled", "expired"):
             previous = self._state_before_order.pop(order_id, None)
-            if previous is not None:
+            position_quantity = event.get("position_quantity")
+            if position_quantity is not None:
+                if position_quantity != 0:
+                    self.in_position.add(symbol)
+                else:
+                    self.in_position.discard(symbol)
+            elif status == "filled" and event.get("action") == "buy":
+                self.in_position.add(symbol)
+            elif status == "filled" and event.get("action") == "sell":
+                self.in_position.discard(symbol)
+            elif previous is not None:
                 previous_symbol, was_in_position = previous
                 if was_in_position:
                     self.in_position.add(previous_symbol)
