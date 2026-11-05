@@ -1,0 +1,571 @@
+{
+  "schema_version": 1,
+  "frozen_date": "2026-11-05",
+  "selection": {
+    "ranking": "descending source CSV Sharpe; original tie-break order retained",
+    "count": 25,
+    "discovery_start": "2025-11-01",
+    "discovery_end": "2026-10-31",
+    "results_csv": "docs/cross-asset-strategy-results-2025-11-to-2026-10.csv",
+    "results_csv_sha256": "5d45541730e265a80f5d3ab60d8964935e6209698c790c75a8bf89937ad5224f",
+    "market_data_snapshot": "docs/sample-cross-asset-2025-06-to-2026-10.parquet",
+    "market_data_snapshot_sha256": "30b39af812892b958b58b81e16210366febc3f650499c91c4646dccc671b23b0",
+    "market_data_last_date": "2026-11-02",
+    "rows": [
+      {
+        "rank": 1,
+        "asset_class": "derivative",
+        "symbol": "ES=F",
+        "strategy": "VWAP mean reversion",
+        "variant": "10:1.0",
+        "parameters": {
+          "period": 10,
+          "num_std": 1.0
+        },
+        "source_metrics": {
+          "sharpe": "2.6351125425053463",
+          "annualized_volatility_pct": "10.489702969280696",
+          "pnl_asset_price_units": "1885.0",
+          "pnl_pct_of_initial_unit_notional": "27.422170497526917",
+          "max_drawdown_asset_price_units": "487.75",
+          "max_drawdown_pct_of_initial_unit_notional": "7.095577538551062",
+          "fills": "28",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 2,
+        "asset_class": "derivative",
+        "symbol": "NQ=F",
+        "strategy": "RSI",
+        "variant": "14:30/70",
+        "parameters": {
+          "period": 14,
+          "oversold": 30,
+          "overbought": 70
+        },
+        "source_metrics": {
+          "sharpe": "2.544347904376659",
+          "annualized_volatility_pct": "5.040135370623394",
+          "pnl_asset_price_units": "3308.25",
+          "pnl_pct_of_initial_unit_notional": "12.722081218274111",
+          "max_drawdown_asset_price_units": "271.75",
+          "max_drawdown_pct_of_initial_unit_notional": "1.0450315336102138",
+          "fills": "2",
+          "rejected_orders": "13"
+        }
+      },
+      {
+        "rank": 3,
+        "asset_class": "derivative",
+        "symbol": "ES=F",
+        "strategy": "RSI",
+        "variant": "14:30/70",
+        "parameters": {
+          "period": 14,
+          "oversold": 30,
+          "overbought": 70
+        },
+        "source_metrics": {
+          "sharpe": "2.3645479273166496",
+          "annualized_volatility_pct": "3.491493822254909",
+          "pnl_asset_price_units": "563.0",
+          "pnl_pct_of_initial_unit_notional": "8.190282222868781",
+          "max_drawdown_asset_price_units": "61.5",
+          "max_drawdown_pct_of_initial_unit_notional": "0.8946755891766075",
+          "fills": "2",
+          "rejected_orders": "11"
+        }
+      },
+      {
+        "rank": 4,
+        "asset_class": "derivative",
+        "symbol": "ES=F",
+        "strategy": "VWAP mean reversion",
+        "variant": "20:1.5",
+        "parameters": {
+          "period": 20,
+          "num_std": 1.5
+        },
+        "source_metrics": {
+          "sharpe": "2.121402185512887",
+          "annualized_volatility_pct": "8.310416268357706",
+          "pnl_asset_price_units": "1202.25",
+          "pnl_pct_of_initial_unit_notional": "17.489816700610998",
+          "max_drawdown_asset_price_units": "487.75",
+          "max_drawdown_pct_of_initial_unit_notional": "7.095577538551062",
+          "fills": "22",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 5,
+        "asset_class": "equity",
+        "symbol": "AAPL",
+        "strategy": "RSI",
+        "variant": "7:30/70",
+        "parameters": {
+          "period": 7,
+          "oversold": 30,
+          "overbought": 70
+        },
+        "source_metrics": {
+          "sharpe": "2.112094365910647",
+          "annualized_volatility_pct": "34.41039199506964",
+          "pnl_asset_price_units": "194.93997192382812",
+          "pnl_pct_of_initial_unit_notional": "72.10118557694783",
+          "max_drawdown_asset_price_units": "37.65000915527344",
+          "max_drawdown_pct_of_initial_unit_notional": "13.925365179281322",
+          "fills": "18",
+          "rejected_orders": "16"
+        }
+      },
+      {
+        "rank": 6,
+        "asset_class": "derivative",
+        "symbol": "NQ=F",
+        "strategy": "Williams %R",
+        "variant": "14:-90/-10",
+        "parameters": {
+          "period": 14,
+          "oversold": -90,
+          "overbought": -10
+        },
+        "source_metrics": {
+          "sharpe": "2.0858731138925437",
+          "annualized_volatility_pct": "10.890055786160731",
+          "pnl_asset_price_units": "5860.0",
+          "pnl_pct_of_initial_unit_notional": "22.53499461621289",
+          "max_drawdown_asset_price_units": "1849.0",
+          "max_drawdown_pct_of_initial_unit_notional": "7.110444546992771",
+          "fills": "11",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 7,
+        "asset_class": "equity",
+        "symbol": "AAPL",
+        "strategy": "CCI",
+        "variant": "20:-150/150",
+        "parameters": {
+          "period": 20,
+          "entry_level": -150,
+          "exit_level": 150
+        },
+        "source_metrics": {
+          "sharpe": "2.037251415140347",
+          "annualized_volatility_pct": "10.731273285477089",
+          "pnl_asset_price_units": "58.639984130859375",
+          "pnl_pct_of_initial_unit_notional": "21.68879135624603",
+          "max_drawdown_asset_price_units": "14.349990844726562",
+          "max_drawdown_pct_of_initial_unit_notional": "5.3075382268312685",
+          "fills": "6",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 8,
+        "asset_class": "equity",
+        "symbol": "AMZN",
+        "strategy": "RSI",
+        "variant": "14:30/70",
+        "parameters": {
+          "period": 14,
+          "oversold": 30,
+          "overbought": 70
+        },
+        "source_metrics": {
+          "sharpe": "2.007021904570463",
+          "annualized_volatility_pct": "12.937393739731165",
+          "pnl_asset_price_units": "62.90998840332031",
+          "pnl_pct_of_initial_unit_notional": "25.75955617429883",
+          "max_drawdown_asset_price_units": "19.600006103515625",
+          "max_drawdown_pct_of_initial_unit_notional": "8.025553192018444",
+          "fills": "2",
+          "rejected_orders": "3"
+        }
+      },
+      {
+        "rank": 9,
+        "asset_class": "equity",
+        "symbol": "AMZN",
+        "strategy": "Bollinger",
+        "variant": "20:1.5",
+        "parameters": {
+          "period": 20,
+          "num_std": 1.5
+        },
+        "source_metrics": {
+          "sharpe": "1.8465902412700779",
+          "annualized_volatility_pct": "23.726233648913624",
+          "pnl_asset_price_units": "106.15000915527344",
+          "pnl_pct_of_initial_unit_notional": "43.464912220414334",
+          "max_drawdown_asset_price_units": "30.150009155273438",
+          "max_drawdown_pct_of_initial_unit_notional": "12.345429942090078",
+          "fills": "13",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 10,
+        "asset_class": "equity",
+        "symbol": "NVDA",
+        "strategy": "RSI",
+        "variant": "7:30/70",
+        "parameters": {
+          "period": 7,
+          "oversold": 30,
+          "overbought": 70
+        },
+        "source_metrics": {
+          "sharpe": "1.8268343802118003",
+          "annualized_volatility_pct": "39.47082789870901",
+          "pnl_asset_price_units": "144.84999084472656",
+          "pnl_pct_of_initial_unit_notional": "71.53439029839753",
+          "max_drawdown_asset_price_units": "54.36000061035156",
+          "max_drawdown_pct_of_initial_unit_notional": "26.84576973463845",
+          "fills": "13",
+          "rejected_orders": "10"
+        }
+      },
+      {
+        "rank": 11,
+        "asset_class": "derivative",
+        "symbol": "ES=F",
+        "strategy": "RSI",
+        "variant": "14:40/60",
+        "parameters": {
+          "period": 14,
+          "oversold": 40,
+          "overbought": 60
+        },
+        "source_metrics": {
+          "sharpe": "1.7728520212466583",
+          "annualized_volatility_pct": "37.98429238567515",
+          "pnl_asset_price_units": "4592.25",
+          "pnl_pct_of_initial_unit_notional": "66.80608088449229",
+          "max_drawdown_asset_price_units": "1356.75",
+          "max_drawdown_pct_of_initial_unit_notional": "19.737416351469307",
+          "fills": "16",
+          "rejected_orders": "10"
+        }
+      },
+      {
+        "rank": 12,
+        "asset_class": "derivative",
+        "symbol": "NQ=F",
+        "strategy": "Stochastic",
+        "variant": "14:20/80",
+        "parameters": {
+          "period": 14,
+          "oversold": 20,
+          "overbought": 80
+        },
+        "source_metrics": {
+          "sharpe": "1.7317287706804725",
+          "annualized_volatility_pct": "15.821113394615526",
+          "pnl_asset_price_units": "7068.0",
+          "pnl_pct_of_initial_unit_notional": "27.18043377941855",
+          "max_drawdown_asset_price_units": "2690.25",
+          "max_drawdown_pct_of_initial_unit_notional": "10.345523765574526",
+          "fills": "17",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 13,
+        "asset_class": "derivative",
+        "symbol": "NQ=F",
+        "strategy": "Williams %R",
+        "variant": "14:-80/-20",
+        "parameters": {
+          "period": 14,
+          "oversold": -80,
+          "overbought": -20
+        },
+        "source_metrics": {
+          "sharpe": "1.7317287706804725",
+          "annualized_volatility_pct": "15.821113394615526",
+          "pnl_asset_price_units": "7068.0",
+          "pnl_pct_of_initial_unit_notional": "27.18043377941855",
+          "max_drawdown_asset_price_units": "2690.25",
+          "max_drawdown_pct_of_initial_unit_notional": "10.345523765574526",
+          "fills": "17",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 14,
+        "asset_class": "equity",
+        "symbol": "AMZN",
+        "strategy": "Bollinger",
+        "variant": "20:2.0",
+        "parameters": {
+          "period": 20,
+          "num_std": 2.0
+        },
+        "source_metrics": {
+          "sharpe": "1.7189466900003485",
+          "annualized_volatility_pct": "23.089331878220467",
+          "pnl_asset_price_units": "96.16000366210938",
+          "pnl_pct_of_initial_unit_notional": "39.37433591903432",
+          "max_drawdown_asset_price_units": "27.69000244140625",
+          "max_drawdown_pct_of_initial_unit_notional": "11.338138687659175",
+          "fills": "10",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 15,
+        "asset_class": "equity",
+        "symbol": "AMZN",
+        "strategy": "CCI",
+        "variant": "20:-150/150",
+        "parameters": {
+          "period": 20,
+          "entry_level": -150,
+          "exit_level": 150
+        },
+        "source_metrics": {
+          "sharpe": "1.6927371374298006",
+          "annualized_volatility_pct": "17.25107744361608",
+          "pnl_asset_price_units": "70.75",
+          "pnl_pct_of_initial_unit_notional": "28.969781199887386",
+          "max_drawdown_asset_price_units": "19.010009765625",
+          "max_drawdown_pct_of_initial_unit_notional": "7.78396923700182",
+          "fills": "10",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 16,
+        "asset_class": "derivative",
+        "symbol": "ES=F",
+        "strategy": "RSI",
+        "variant": "7:30/70",
+        "parameters": {
+          "period": 7,
+          "oversold": 30,
+          "overbought": 70
+        },
+        "source_metrics": {
+          "sharpe": "1.6611315210912625",
+          "annualized_volatility_pct": "63.089280612276546",
+          "pnl_asset_price_units": "7146.75",
+          "pnl_pct_of_initial_unit_notional": "103.96784986907186",
+          "max_drawdown_asset_price_units": "3403.75",
+          "max_drawdown_pct_of_initial_unit_notional": "49.516293279022406",
+          "fills": "20",
+          "rejected_orders": "9"
+        }
+      },
+      {
+        "rank": 17,
+        "asset_class": "equity",
+        "symbol": "NVDA",
+        "strategy": "VWAP mean reversion",
+        "variant": "10:1.0",
+        "parameters": {
+          "period": 10,
+          "num_std": 1.0
+        },
+        "source_metrics": {
+          "sharpe": "1.6358870988376648",
+          "annualized_volatility_pct": "28.65908596846351",
+          "pnl_asset_price_units": "94.18000793457031",
+          "pnl_pct_of_initial_unit_notional": "46.510941468540665",
+          "max_drawdown_asset_price_units": "20.629989624023438",
+          "max_drawdown_pct_of_initial_unit_notional": "10.188152039296524",
+          "fills": "28",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 18,
+        "asset_class": "derivative",
+        "symbol": "CL=F",
+        "strategy": "RSI",
+        "variant": "14:30/70",
+        "parameters": {
+          "period": 14,
+          "oversold": 30,
+          "overbought": 70
+        },
+        "source_metrics": {
+          "sharpe": "1.6285490131349005",
+          "annualized_volatility_pct": "46.17301892490661",
+          "pnl_asset_price_units": "45.49000549316406",
+          "pnl_pct_of_initial_unit_notional": "74.59823849565053",
+          "max_drawdown_asset_price_units": "23.040000915527344",
+          "max_drawdown_pct_of_initial_unit_notional": "37.78288141765111",
+          "fills": "4",
+          "rejected_orders": "4"
+        }
+      },
+      {
+        "rank": 19,
+        "asset_class": "equity",
+        "symbol": "NVDA",
+        "strategy": "VWAP mean reversion",
+        "variant": "20:1.5",
+        "parameters": {
+          "period": 20,
+          "num_std": 1.5
+        },
+        "source_metrics": {
+          "sharpe": "1.6021125170503345",
+          "annualized_volatility_pct": "22.14785186209904",
+          "pnl_asset_price_units": "71.27999877929688",
+          "pnl_pct_of_initial_unit_notional": "35.20173679964824",
+          "max_drawdown_asset_price_units": "25.919998168945312",
+          "max_drawdown_pct_of_initial_unit_notional": "12.800630878456051",
+          "fills": "19",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 20,
+        "asset_class": "derivative",
+        "symbol": "ES=F",
+        "strategy": "CCI",
+        "variant": "20:-150/150",
+        "parameters": {
+          "period": 20,
+          "entry_level": -150,
+          "exit_level": 150
+        },
+        "source_metrics": {
+          "sharpe": "1.5607452566407023",
+          "annualized_volatility_pct": "10.121281020706684",
+          "pnl_asset_price_units": "1077.25",
+          "pnl_pct_of_initial_unit_notional": "15.67137038114635",
+          "max_drawdown_asset_price_units": "620.25",
+          "max_drawdown_pct_of_initial_unit_notional": "9.023130637183591",
+          "fills": "8",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 21,
+        "asset_class": "derivative",
+        "symbol": "ES=F",
+        "strategy": "Bollinger",
+        "variant": "20:2.0",
+        "parameters": {
+          "period": 20,
+          "num_std": 2.0
+        },
+        "source_metrics": {
+          "sharpe": "1.546739397193145",
+          "annualized_volatility_pct": "10.343287758189822",
+          "pnl_asset_price_units": "1091.0",
+          "pnl_pct_of_initial_unit_notional": "15.87139947628746",
+          "max_drawdown_asset_price_units": "620.25",
+          "max_drawdown_pct_of_initial_unit_notional": "9.023130637183591",
+          "fills": "8",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 22,
+        "asset_class": "equity",
+        "symbol": "AAPL",
+        "strategy": "Bollinger",
+        "variant": "10:2.0",
+        "parameters": {
+          "period": 10,
+          "num_std": 2.0
+        },
+        "source_metrics": {
+          "sharpe": "1.5382232873992387",
+          "annualized_volatility_pct": "18.488159615405152",
+          "pnl_asset_price_units": "76.28005981445312",
+          "pnl_pct_of_initial_unit_notional": "28.21321196584361",
+          "max_drawdown_asset_price_units": "32.560028076171875",
+          "max_drawdown_pct_of_initial_unit_notional": "12.042766824794763",
+          "fills": "11",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 23,
+        "asset_class": "equity",
+        "symbol": "AMZN",
+        "strategy": "CCI",
+        "variant": "20:-100/100",
+        "parameters": {
+          "period": 20,
+          "entry_level": -100,
+          "exit_level": 100
+        },
+        "source_metrics": {
+          "sharpe": "1.4771899412341034",
+          "annualized_volatility_pct": "19.2402177815515",
+          "pnl_asset_price_units": "68.86000061035156",
+          "pnl_pct_of_initial_unit_notional": "28.195889061568856",
+          "max_drawdown_asset_price_units": "28.709976196289062",
+          "max_drawdown_pct_of_initial_unit_notional": "11.75578415067801",
+          "fills": "12",
+          "rejected_orders": "0"
+        }
+      },
+      {
+        "rank": 24,
+        "asset_class": "equity",
+        "symbol": "AAPL",
+        "strategy": "RSI",
+        "variant": "14:40/60",
+        "parameters": {
+          "period": 14,
+          "oversold": 40,
+          "overbought": 60
+        },
+        "source_metrics": {
+          "sharpe": "1.4717014976070038",
+          "annualized_volatility_pct": "34.080134303803554",
+          "pnl_asset_price_units": "134.5299530029297",
+          "pnl_pct_of_initial_unit_notional": "49.75772291027333",
+          "max_drawdown_asset_price_units": "42.79998779296875",
+          "max_drawdown_pct_of_initial_unit_notional": "15.830154442403192",
+          "fills": "14",
+          "rejected_orders": "12"
+        }
+      },
+      {
+        "rank": 25,
+        "asset_class": "derivative",
+        "symbol": "GC=F",
+        "strategy": "Stochastic",
+        "variant": "14:20/80",
+        "parameters": {
+          "period": 14,
+          "oversold": 20,
+          "overbought": 80
+        },
+        "source_metrics": {
+          "sharpe": "1.3866838737349976",
+          "annualized_volatility_pct": "23.38348898295508",
+          "pnl_asset_price_units": "1285.6005859375",
+          "pnl_pct_of_initial_unit_notional": "32.16816179000375",
+          "max_drawdown_asset_price_units": "738.60009765625",
+          "max_drawdown_pct_of_initial_unit_notional": "18.481173468190917",
+          "fills": "10",
+          "rejected_orders": "0"
+        }
+      }
+    ]
+  },
+  "holdout": {
+    "start": "2026-11-03",
+    "end": "2027-11-02",
+    "status": "predeclared_not_run",
+    "selection_locked": true,
+    "rule": "Do not change top-25 membership, strategy variants, or parameters based on any observation from this period."
+  },
+  "limitations": [
+    "The discovery universe is the original five selected instruments per asset class, not a survivorship-aware historical universe.",
+    "The continuous Yahoo futures symbols are not individual tradable expiries.",
+    "The frozen ranking is an exploratory unit-notional P&L Sharpe proxy, not funded-account performance."
+  ]
+}

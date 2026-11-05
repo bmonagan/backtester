@@ -42,7 +42,10 @@ include the risk-adjusted results and limitations.
 
 The [top-25 strict backtest readiness plan](docs/top-25-strict-backtest-readiness-plan.md)
 records the current ranking and the simulator work required before those
-strategies can be tested under realistic market conditions.
+strategies can be tested under realistic market conditions. Its
+[frozen top-25 manifest](docs/top-25-strict-backtest-manifest.json) records
+the selection, source hashes, and predeclared holdout window; verify it with
+`uv run python scripts/freeze_top25_manifest.py`.
 
 | strategy  | final_equity | trades | sharpe | max_drawdown | cagr | win_rate | realized_pnl |
 |-----------|--------------|--------|--------|--------------|------|----------|--------------|

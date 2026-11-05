@@ -186,3 +186,23 @@ screen as an explicitly exploratory baseline; do not overwrite its CSV.
 Until those gates are implemented and validated, the existing top-25 table
 is a hypothesis list, not a realistic performance estimate or investment
 recommendation.
+
+## Phase execution status
+
+### Phase 1 — Freeze selection and test inputs: in progress
+
+- The exact top 25, original rank order, strategy variants, explicit parameter
+  values, source metrics, and SHA-256 hashes for the result CSV and OHLCV
+  snapshot are frozen in
+  [`top-25-strict-backtest-manifest.json`](./top-25-strict-backtest-manifest.json).
+- The discovery interval is November 1, 2025–October 31, 2026. The snapshot
+  ends November 2, 2026; the predeclared one-year holdout is November 3,
+  2026–November 2, 2027. It has not been run, and the manifest locks the
+  selected strategies and parameters against holdout-based changes.
+- Verify the manifest against its source inputs with
+  `uv run python scripts/freeze_top25_manifest.py`. Regenerate it only for an
+  intentional source change with `--write`.
+- **Still outstanding:** the selected five equities and five crypto assets
+  are not survivorship-aware historical universes. Phase 1 is not complete
+  until point-in-time membership and an appropriate historical universe are
+  sourced and frozen. No holdout result is available yet.
