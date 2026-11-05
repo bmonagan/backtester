@@ -13,6 +13,7 @@ from backtester.extra_strategies import (
     VwapMeanReversionStrategy,
     WilliamsRStrategy,
 )
+from backtester.instruments import AssetClass, FeeSchedule, InstrumentSpec, MarginSchedule
 from backtester.metrics import cagr, max_drawdown, sharpe_ratio, win_rate
 from backtester.portfolio import Portfolio, PortfolioSnapshot, Position
 from backtester.strategy import (
@@ -30,6 +31,10 @@ from backtester.strategy import (
 __all__ = [
     "Bar",
     "DataFeed",
+    "AssetClass",
+    "FeeSchedule",
+    "MarginSchedule",
+    "InstrumentSpec",
     "BacktestEngine",
     "Portfolio",
     "PortfolioSnapshot",

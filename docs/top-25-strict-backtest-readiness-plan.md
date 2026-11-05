@@ -206,3 +206,13 @@ recommendation.
   are not survivorship-aware historical universes. Phase 1 is not complete
   until point-in-time membership and an appropriate historical universe are
   sourced and frozen. No holdout result is available yet.
+
+### Phase 2 — Instrument-aware data and accounting: in progress
+
+- Added immutable, validated `InstrumentSpec`, `FeeSchedule`, and
+  `MarginSchedule` metadata types. Unknown market conventions remain
+  explicit; incomplete metadata cannot be reported as execution-ready.
+- **Still outstanding:** no symbol metadata registry or instrument-aware
+  ledger behavior is wired in yet. Futures contract history, corporate
+  actions, and venue-specific crypto assumptions remain unmodeled. Existing
+  backtests retain their prior behavior.
