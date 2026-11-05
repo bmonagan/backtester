@@ -20,6 +20,7 @@ from backtester.instruments import (
     InstrumentSpec,
     MarginSchedule,
 )
+from backtester.holdout import run_frozen_top25_holdout
 from backtester.metrics import (
     annualized_volatility,
     benchmark_relative_metrics,
@@ -34,6 +35,12 @@ from backtester.metrics import (
     win_rate,
 )
 from backtester.portfolio import Portfolio, PortfolioSnapshot, Position
+from backtester.robustness import (
+    block_bootstrap_mean_interval,
+    block_bootstrap_mean_pvalue,
+    bootstrap_strategy_summary,
+    holm_adjusted_pvalues,
+)
 from backtester.strategy import (
     BollingerMeanReversionStrategy,
     BuyAndHoldStrategy,
@@ -99,4 +106,9 @@ __all__ = [
     "WalkForwardFold",
     "walk_forward_splits",
     "run_walk_forward",
+    "block_bootstrap_mean_interval",
+    "block_bootstrap_mean_pvalue",
+    "bootstrap_strategy_summary",
+    "holm_adjusted_pvalues",
+    "run_frozen_top25_holdout",
 ]
