@@ -1,6 +1,8 @@
 import pytest
 
-from backtester.validation import WalkForwardFold, walk_forward_splits
+from backtester.datafeed import Bar
+from backtester.strategy import BuyAndHoldStrategy
+from backtester.validation import WalkForwardFold, run_walk_forward, walk_forward_splits
 
 
 def test_walk_forward_splits_use_expanding_train_and_forward_test_windows():
@@ -107,3 +109,27 @@ def test_walk_forward_rejects_insufficient_unique_timestamps():
             validation_size=1,
             test_size=1,
         )
+
+
+def test_run_walk_forward_warms_indicators_but_trades_only_in_test_windows():
+    bars = [
+        Bar(index, "AAPL", price, price, price, price, 1000)
+        for index, price in enumerate(range(100, 112))
+    ]
+
+    results = run_walk_forward(
+        bars,
+        lambda: BuyAndHoldStrategy(quantity=1),
+        train_size=3,
+        validation_size=2,
+        test_size=3,
+        starting_cash=1000.0,
+    )
+
+    assert [row["test_start"] for row in results] == [5, 8]
+    assert [row["test_end"] for row in results] == [7, 10]
+    assert [row["fills"] for row in results] == [1, 1]
+    assert results[0]["total_return"] == pytest.approx(0.001)
+    assert results[1]["total_return"] == pytest.approx(0.001)
+    assert all(row["pending_orders"] == 0 for row in results)
+    assert all(row["open_positions"] == 1 for row in results)

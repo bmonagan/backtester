@@ -20,6 +20,7 @@ class BacktestEngine:
         strict_instruments: bool = False,
         max_gross_leverage: float | None = None,
         execution_models: dict[str, ExecutionCostModel] | None = None,
+        trade_start: object | None = None,
     ):
         self.feed = feed
         self.strategy = strategy
@@ -32,6 +33,7 @@ class BacktestEngine:
         self.instrument_specs = instrument_specs or {}
         self.execution_models = execution_models or {}
         self.strict_instruments = strict_instruments
+        self.trade_start = trade_start
 
         # History segregated per symbol for clean multi-asset support
         self.history: Dict[str, List["Bar"]] = defaultdict(list)
@@ -69,7 +71,9 @@ class BacktestEngine:
                 portfolio=self.portfolio
             )
 
-            if order:
+            if order and (
+                self.trade_start is None or bar.timestamp >= self.trade_start
+            ):
                 self._queue_order(order, bar.timestamp)
 
         return self.portfolio
