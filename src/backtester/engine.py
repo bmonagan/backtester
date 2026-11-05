@@ -3,6 +3,7 @@ import math
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Dict, List
 
+from backtester.instruments import InstrumentSpec
 from backtester.portfolio import Portfolio
 
 if TYPE_CHECKING:
@@ -14,13 +15,18 @@ class BacktestEngine:
         self, feed: Any, strategy: Any, starting_cash: float,
         commission: float = 0.0, slippage_bps: float = 0.0,
         allow_shorts: bool = False,
+        instrument_specs: dict[str, InstrumentSpec] | None = None,
+        strict_instruments: bool = False,
     ):
         self.feed = feed
         self.strategy = strategy
         self.portfolio = Portfolio(
             starting_cash, commission=commission,
             slippage_bps=slippage_bps, allow_shorts=allow_shorts,
+            instrument_specs=instrument_specs,
         )
+        self.instrument_specs = instrument_specs or {}
+        self.strict_instruments = strict_instruments
 
         # History segregated per symbol for clean multi-asset support
         self.history: Dict[str, List["Bar"]] = defaultdict(list)
@@ -31,6 +37,12 @@ class BacktestEngine:
 
     def run(self) -> Portfolio:
         for bar in self.feed:
+            if self.strict_instruments:
+                spec = self.instrument_specs.get(bar.symbol)
+                if spec is None:
+                    raise ValueError(f"Missing instrument metadata for {bar.symbol}")
+                if not spec.metadata_complete:
+                    raise ValueError(f"Incomplete instrument metadata for {bar.symbol}")
             # 1. Execute orders queued from previous bar at current bar's Open
             self._fill_pending_orders(bar)
 
@@ -174,10 +186,12 @@ class BacktestEngine:
                 equity = self.portfolio.current_equity(self.latest_prices)
             except KeyError:
                 equity = self.portfolio.cash
+            spec = self.instrument_specs.get(order["symbol"])
+            multiplier = spec.multiplier if spec and spec.multiplier else 1.0
             held = self.portfolio.positions.get(order["symbol"])
             position_qty = held.quantity if held else 0.0
             shares = self._resolve_shares(
-                order, fill, equity, position_qty,
+                order, fill * multiplier, equity, position_qty,
                 cash=self.portfolio.cash,
                 commission=self.portfolio.commission,
                 slippage_bps=self.portfolio.slippage_bps,

@@ -29,6 +29,7 @@ def test_complete_future_metadata_is_complete():
     assert spec.metadata_complete
     assert spec.multiplier == 50.0
     assert spec.contract_size == 1.0
+    assert spec.tick_value == pytest.approx(12.5)
     assert spec.margin_schedule.initial == 12000.0
 
 
@@ -70,6 +71,12 @@ def test_future_requires_margin_for_complete_metadata():
     spec = _complete_future(margin_schedule=None)
 
     assert not spec.metadata_complete
+
+
+def test_tick_value_is_unknown_when_either_input_is_missing():
+    spec = InstrumentSpec("AAPL", "equity", "USD", tick_size=0.01)
+
+    assert spec.tick_value is None
 
 
 def test_future_metadata_rejects_invalid_margin_schedule():

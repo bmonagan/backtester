@@ -140,3 +140,9 @@ class InstrumentSpec:
         if self.asset_class == "future":
             return self.contract_size is not None and self.margin_schedule is not None
         return True
+
+    @property
+    def tick_value(self) -> float | None:
+        if self.tick_size is None or self.multiplier is None:
+            return None
+        return self.tick_size * self.multiplier

@@ -213,7 +213,23 @@ recommendation.
   `MarginSchedule` metadata types. Unknown market conventions remain
   explicit; metadata completeness is not yet a claim that the engine can
   execute or account for that instrument.
-- **Still outstanding:** no symbol metadata registry or instrument-aware
-  ledger behavior is wired in yet. Futures contract history, corporate
-  actions, and venue-specific crypto assumptions remain unmodeled. Existing
-  backtests retain their prior behavior.
+- The ledger now accepts explicit symbol metadata: multipliers affect cash
+  instruments, configured fees and quantity increments are applied, futures
+  cash flows settle variation margin, and initial margin is checked. Split
+  and cash-dividend operations are available for cash instruments. This is
+  opt-in; legacy runs without specs preserve their prior accounting.
+- **Still outstanding:** no verified symbol metadata registry or source data
+  has been added. Futures expiry/roll schedules, maintenance-margin
+  liquidation, equity split-adjusted historical OHLC and point-in-time
+  constituents, and venue/funding assumptions for crypto remain unmodeled.
+  The new ledger fixtures are synthetic and do not certify any vendor
+  instrument series.
+
+### Phase 3 — Fill-aware orders and risk sizing: in progress
+
+- The engine can optionally require complete metadata for every observed
+  symbol, and notional/fraction sizing accounts for an instrument's multiplier.
+- **Still outstanding:** strategy state is still signal-based, order lifecycle
+  events, portfolio exposure limits, risk-budget sizing, partial fills,
+  borrow/funding, maintenance-margin liquidation, and fill-aware target
+  position state are not implemented.
