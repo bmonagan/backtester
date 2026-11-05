@@ -281,10 +281,14 @@ recommendation.
   usage are captured per mark-to-market snapshot, using instrument
   multipliers; same-timestamp multi-symbol snapshots are consolidated for
   period-return calculations.
+- Added optional benchmark-relative total return, active return, tracking
+  error, and information ratio. Timestamped strategy and benchmark curves
+  align on shared timestamps; un-timestamped curves require equal lengths.
 - Synthetic tests cover hand-calculated return metrics, account-level
   turnover/exposure, and invariance under proportional scaling of starting
   capital and positions.
-- **Still outstanding:** calendar-aware alignment across instruments,
-  benchmark-relative reporting, tail estimates with adequate sample sizes,
-  and an audited top-25 report have not been implemented. Metrics are
-  historical diagnostics, not statistical guarantees.
+- **Still outstanding:** asset-class calendar-aware cross-instrument
+  aggregation, per-instrument plus combined portfolio reports, and an
+  audited top-25 report have not been implemented. Tail estimates from short
+  histories are unstable. Metrics are historical diagnostics, not statistical
+  guarantees.

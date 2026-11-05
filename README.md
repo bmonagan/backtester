@@ -182,6 +182,12 @@ included; Sharpe and Sortino use a zero risk-free/target rate by default.
 Tail estimates from short histories are unstable and should not be treated
 as forecasts.
 
+To include benchmark-relative fields in `run_one` or `compare`, pass a
+timestamped benchmark equity curve (or an equal-length un-timestamped
+sequence) as `benchmark_equity_curve`. Timestamped observations are matched
+on shared timestamps; the comparison does not fetch or construct a benchmark
+automatically.
+
 ## engineering decisions
 
 - Fills happen at the next open, never the signaling close — no lookahead.
