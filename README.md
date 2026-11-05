@@ -174,6 +174,14 @@ value (sells), capped by available cash. With several symbols held at once,
 keep `fraction × expected concurrent positions` at or below 1 or later buys
 will be rejected for insufficient funds.
 
+Comparison rows include account-return Sharpe and Sortino, annualized
+volatility, drawdown and drawdown duration, historical 95% VaR and expected
+shortfall, turnover, gross exposure, and margin utilization. Returns use the
+mark-to-market account equity curve, so cash days and execution costs are
+included; Sharpe and Sortino use a zero risk-free/target rate by default.
+Tail estimates from short histories are unstable and should not be treated
+as forecasts.
+
 ## engineering decisions
 
 - Fills happen at the next open, never the signaling close — no lookahead.

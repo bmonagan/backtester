@@ -264,7 +264,27 @@ recommendation.
   on fills. Wrapped strategies forward these updates.
 - **Still outstanding:** strategy state is still signal-based, order lifecycle
   transitions do not cover every custom strategy; target-position orders,
-  account-risk sizing, cross-currency exposure caps, partial fills,
-  expiring orders, borrow/funding, and maintenance-margin liquidation are
-  not implemented. Duplicate rejection and retry do not guarantee that the
-  signal remains valid at a later fill.
+  account-risk sizing, cross-currency exposure caps, borrow/funding, and
+  maintenance-margin liquidation are not implemented. Duplicate rejection
+  and retry do not guarantee that the signal remains valid at a later fill.
+  Phase 4 has since added participation-limited partial fills and optional
+  order expiry.
+
+### Phase 5 — Return and risk reporting: in progress
+
+- Added funded-account metrics based on mark-to-market equity: Sortino,
+  annualized volatility, maximum drawdown duration, historical 95% VaR and
+  expected shortfall, turnover, gross exposure, and margin utilization.
+- Comparison uses a zero annual risk-free/Sortino target by default; the
+  metrics API supports a configured risk-free rate and periods-per-year.
+- Comparison results now include these fields. Gross exposure and margin
+  usage are captured per mark-to-market snapshot, using instrument
+  multipliers; same-timestamp multi-symbol snapshots are consolidated for
+  period-return calculations.
+- Synthetic tests cover hand-calculated return metrics, account-level
+  turnover/exposure, and invariance under proportional scaling of starting
+  capital and positions.
+- **Still outstanding:** calendar-aware alignment across instruments,
+  benchmark-relative reporting, tail estimates with adequate sample sizes,
+  and an audited top-25 report have not been implemented. Metrics are
+  historical diagnostics, not statistical guarantees.
