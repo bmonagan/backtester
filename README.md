@@ -189,9 +189,10 @@ on shared timestamps; the comparison does not fetch or construct a benchmark
 automatically.
 
 `walk_forward_splits` provides expanding chronological train/validation/test
-windows over ordered timestamps. It collapses duplicate timestamps from
-multi-symbol feeds; it only defines fold boundaries and does not run strategies
-or access the predeclared top-25 holdout.
+windows over ordered timestamps. `run_walk_forward` runs a supplied strategy
+factory on each test fold with fresh cash/positions and pre-test bars for
+indicator warm-up; it only queues orders during each test window. These
+utilities do not select parameters or access the predeclared top-25 holdout.
 
 ## engineering decisions
 

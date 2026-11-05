@@ -299,11 +299,18 @@ recommendation.
   train, validation, and test periods from unique ordered timestamps.
   Repeated timestamps across symbols are collapsed, and test windows cannot
   overlap.
+- Added `run_walk_forward`: each fold creates a fresh strategy and cash
+  ledger, observes all pre-test bars for indicator warm-up, and only queues
+  orders from the test window. Results include fold boundaries, funded-account
+  metrics, fills, rejections, pending orders, and ending open positions.
 - Synthetic tests verify fold boundaries, expanding training history,
-  timestamp deduplication, test-window separation, and invalid input handling.
+  timestamp deduplication, test-window separation, invalid input handling,
+  next-bar execution inside test windows, and per-fold account reset.
 - **Still outstanding:** no frozen top-25 runner or result report has been
   implemented. The checked-in data snapshot ends November 2, 2026, while the
   predeclared holdout starts November 3, 2026; therefore there are no holdout
   observations in the frozen snapshot. Parameter selection, cost sensitivity,
   regime coverage, bootstrap intervals, multiple-testing adjustment, and
-  cash/buy-and-hold comparisons remain to be implemented and run.
+  cash/buy-and-hold comparisons remain to be implemented and run. The generic
+  runner does not claim that its single supplied strategy configuration was
+  selected by a training/validation protocol.
