@@ -75,6 +75,7 @@ def run_one(
     allow_shorts=False,
     order_type: Literal["market", "limit", "stop"] = "market",
     order_price=None,
+    benchmark_equity_curve=None,
 ) -> dict:
     feed = feed_factory()
     kwargs = (strategy_kwargs or {}).get(name, {})
@@ -95,7 +96,9 @@ def run_one(
         final_equity = pf.current_equity(engine.latest_prices)
     else:
         final_equity = starting_cash
-    risk_metrics = portfolio_metrics(pf)
+    risk_metrics = portfolio_metrics(
+        pf, benchmark_equity_curve=benchmark_equity_curve
+    )
     return {
         "strategy": name,
         "final_equity": final_equity,
@@ -134,6 +137,15 @@ def format_table(rows: list[dict]) -> str:
         "average_gross_exposure",
         "average_margin_utilization",
     ]
+    if rows and "benchmark_total_return" in rows[0]:
+        cols.extend(
+            [
+                "benchmark_total_return",
+                "active_total_return",
+                "tracking_error",
+                "information_ratio",
+            ]
+        )
     if rows:
         widths = {c: max(len(c), *(len(_fmt(c, r[c])) for r in rows)) for c in cols}
     else:
@@ -162,8 +174,13 @@ def _fmt(col: str, val) -> str:
         "expected_shortfall",
         "average_gross_exposure",
         "average_margin_utilization",
+        "benchmark_total_return",
+        "active_total_return",
+        "tracking_error",
     ):
         return f"{val:.1%}"
+    if col == "information_ratio":
+        return f"{val:.3f}"
     if col == "max_drawdown_duration":
         return str(val)
     if col in ("turnover",):

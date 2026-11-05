@@ -4,6 +4,7 @@ import pytest
 
 from backtester.metrics import (
     annualized_volatility,
+    benchmark_relative_metrics,
     cagr,
     historical_expected_shortfall,
     historical_var,
@@ -211,3 +212,49 @@ def test_portfolio_metrics_consolidate_multiple_marks_at_same_timestamp():
 
     assert metrics["total_return"] == pytest.approx(50.0 / 10100.0)
     assert metrics["sharpe"] == 0.0
+
+
+def test_benchmark_relative_metrics_align_timestamped_curves():
+    strategy = [("d1", 100), ("d2", 110), ("d3", 99)]
+    benchmark = [("d1", 100), ("d2", 105), ("d3", 100)]
+
+    metrics = benchmark_relative_metrics(strategy, benchmark, periods_per_year=1)
+
+    assert metrics["benchmark_total_return"] == pytest.approx(0.0)
+    assert metrics["active_total_return"] == pytest.approx(-0.01)
+    assert metrics["tracking_error"] == pytest.approx(
+        abs((0.1 - 0.05) - (-0.1 - (100 / 105 - 1))) / 2
+    )
+
+
+def test_benchmark_relative_metrics_ignores_nonshared_dates():
+    metrics = benchmark_relative_metrics(
+        [("d1", 100), ("d2", 110), ("d3", 121)],
+        [("d1", 100), ("d3", 120)],
+        periods_per_year=1,
+    )
+
+    assert metrics["benchmark_total_return"] == pytest.approx(0.2)
+    assert metrics["active_total_return"] == pytest.approx(0.01)
+
+
+def test_benchmark_relative_metrics_uses_last_mark_at_duplicate_timestamp():
+    metrics = benchmark_relative_metrics(
+        [("d1", 100), ("d1", 105), ("d2", 110)],
+        [("d1", 100), ("d1", 102), ("d2", 108)],
+        periods_per_year=1,
+    )
+
+    assert metrics["active_total_return"] == pytest.approx(
+        (110 / 105 - 1) - (108 / 102 - 1)
+    )
+
+
+def test_untimestamped_benchmark_curves_must_have_equal_lengths():
+    with pytest.raises(ValueError, match="must match"):
+        benchmark_relative_metrics([100, 110], [100, 105, 110])
+
+
+def test_timestamped_and_untimestamped_benchmark_curves_cannot_be_mixed():
+    with pytest.raises(ValueError, match="both include timestamps"):
+        benchmark_relative_metrics([("d1", 100), ("d2", 110)], [100, 105])

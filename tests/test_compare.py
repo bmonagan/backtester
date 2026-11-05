@@ -100,3 +100,17 @@ def test_format_table_lists_names():
     assert "sharpe" in table
     assert "sortino" in table
     assert "expected_shortfall" in table
+
+
+def test_run_one_adds_benchmark_relative_fields_when_benchmark_given():
+    benchmark = [(index, 100 + index) for index in range(60)]
+    row = run_one(
+        "buyhold",
+        _ramp_factory(),
+        starting_cash=10000.0,
+        benchmark_equity_curve=benchmark,
+    )
+
+    assert "active_total_return" in row
+    assert "information_ratio" in row
+    assert "active_total_return" in format_table([row])

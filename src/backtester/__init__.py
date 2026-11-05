@@ -22,6 +22,7 @@ from backtester.instruments import (
 )
 from backtester.metrics import (
     annualized_volatility,
+    benchmark_relative_metrics,
     cagr,
     historical_expected_shortfall,
     historical_var,
@@ -81,6 +82,7 @@ __all__ = [
     "sharpe_ratio",
     "sortino_ratio",
     "annualized_volatility",
+    "benchmark_relative_metrics",
     "max_drawdown",
     "max_drawdown_duration",
     "historical_var",

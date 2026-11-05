@@ -184,6 +184,91 @@ def historical_expected_shortfall(equity_curve, confidence_level=0.95) -> float:
     return max(0.0, -statistics.fmean(tail_returns))
 
 
+def benchmark_relative_metrics(
+    equity_curve,
+    benchmark_equity_curve,
+    periods_per_year=252,
+) -> dict:
+    """Compare account and benchmark returns on shared timestamps.
+
+    Timestamped inputs are aligned by exact timestamp intersection. Plain
+    equity sequences are paired by index and must have equal lengths.
+    """
+    _validate_periods_per_year(periods_per_year)
+    strategy_points = _timestamped_equity(equity_curve)
+    benchmark_points = _timestamped_equity(benchmark_equity_curve)
+    if strategy_points is not None and benchmark_points is not None:
+        strategy_values = strategy_points
+        benchmark_values = benchmark_points
+    else:
+        if strategy_points is not None or benchmark_points is not None:
+            raise ValueError("strategy and benchmark must both include timestamps")
+        strategy_values = _to_equity_list(equity_curve)
+        benchmark_values = _to_equity_list(benchmark_equity_curve)
+        if len(strategy_values) != len(benchmark_values):
+            raise ValueError("untimestamped strategy and benchmark curves must match")
+        strategy_values = list(zip(range(len(strategy_values)), strategy_values))
+        benchmark_values = list(zip(range(len(benchmark_values)), benchmark_values))
+
+    benchmark_by_timestamp = dict(benchmark_values)
+    aligned = [
+        (timestamp, equity, benchmark_by_timestamp[timestamp])
+        for timestamp, equity in strategy_values
+        if timestamp in benchmark_by_timestamp
+    ]
+    if len(aligned) < 2:
+        return {
+            "benchmark_total_return": 0.0,
+            "active_total_return": 0.0,
+            "tracking_error": 0.0,
+            "information_ratio": 0.0,
+        }
+
+    strategy_returns = _equity_returns([point[1] for point in aligned])
+    benchmark_returns = _equity_returns([point[2] for point in aligned])
+    active_returns = [
+        strategy - benchmark
+        for strategy, benchmark in zip(strategy_returns, benchmark_returns)
+    ]
+    tracking_error = statistics.pstdev(active_returns) * math.sqrt(periods_per_year)
+    information_ratio = (
+        statistics.fmean(active_returns) * math.sqrt(periods_per_year) / tracking_error
+        if tracking_error
+        else 0.0
+    )
+    strategy_total = aligned[-1][1] / aligned[0][1] - 1.0
+    benchmark_total = aligned[-1][2] / aligned[0][2] - 1.0
+    return {
+        "benchmark_total_return": benchmark_total,
+        "active_total_return": strategy_total - benchmark_total,
+        "tracking_error": tracking_error,
+        "information_ratio": information_ratio,
+    }
+
+
+def _timestamped_equity(equity_curve):
+    points = []
+    for item in equity_curve:
+        if hasattr(item, "timestamp") and hasattr(item, "total_equity"):
+            points.append((item.timestamp, float(item.total_equity)))
+        elif isinstance(item, dict) and "timestamp" in item:
+            equity = item.get("total_equity", item.get("equity"))
+            if equity is None:
+                raise ValueError(f"Cannot extract equity from dict {item!r}")
+            points.append((item["timestamp"], float(equity)))
+        elif isinstance(item, (list, tuple)) and len(item) == 2:
+            points.append((item[0], float(item[1])))
+        else:
+            return None
+    deduplicated = []
+    for timestamp, equity in points:
+        if deduplicated and deduplicated[-1][0] == timestamp:
+            deduplicated[-1] = (timestamp, equity)
+        else:
+            deduplicated.append((timestamp, equity))
+    return deduplicated
+
+
 def _lower_tail_quantile(returns: list[float], confidence_level: float) -> float:
     if (
         isinstance(confidence_level, bool)
@@ -204,6 +289,7 @@ def portfolio_metrics(
     risk_free_rate=0.0,
     periods_per_year=252,
     confidence_level=0.95,
+    benchmark_equity_curve=None,
 ) -> dict:
     """Summarize funded account returns, turnover, exposure, and margin use.
 
@@ -251,7 +337,7 @@ def portfolio_metrics(
         if history
         else 0.0
     )
-    return {
+    results = {
         "total_return": (
             equities[-1] / equities[0] - 1.0 if len(equities) > 1 else 0.0
         ),
@@ -273,6 +359,15 @@ def portfolio_metrics(
         "average_gross_exposure": average_exposure,
         "average_margin_utilization": average_margin_utilization,
     }
+    if benchmark_equity_curve is not None:
+        results.update(
+            benchmark_relative_metrics(
+                [(snapshot.timestamp, snapshot.total_equity) for snapshot in history],
+                benchmark_equity_curve,
+                periods_per_year=periods_per_year,
+            )
+        )
+    return results
 
 
 def win_rate(trade_log) -> float:
