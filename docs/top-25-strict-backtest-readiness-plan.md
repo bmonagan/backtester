@@ -292,3 +292,18 @@ recommendation.
   audited top-25 report have not been implemented. Tail estimates from short
   histories are unstable. Metrics are historical diagnostics, not statistical
   guarantees.
+
+### Phase 6 — Out-of-sample and robustness protocol: in progress
+
+- Added a reusable expanding-window splitter that produces chronological
+  train, validation, and test periods from unique ordered timestamps.
+  Repeated timestamps across symbols are collapsed, and test windows cannot
+  overlap.
+- Synthetic tests verify fold boundaries, expanding training history,
+  timestamp deduplication, test-window separation, and invalid input handling.
+- **Still outstanding:** no frozen top-25 runner or result report has been
+  implemented. The checked-in data snapshot ends November 2, 2026, while the
+  predeclared holdout starts November 3, 2026; therefore there are no holdout
+  observations in the frozen snapshot. Parameter selection, cost sensitivity,
+  regime coverage, bootstrap intervals, multiple-testing adjustment, and
+  cash/buy-and-hold comparisons remain to be implemented and run.

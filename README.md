@@ -188,6 +188,11 @@ sequence) as `benchmark_equity_curve`. Timestamped observations are matched
 on shared timestamps; the comparison does not fetch or construct a benchmark
 automatically.
 
+`walk_forward_splits` provides expanding chronological train/validation/test
+windows over ordered timestamps. It collapses duplicate timestamps from
+multi-symbol feeds; it only defines fold boundaries and does not run strategies
+or access the predeclared top-25 holdout.
+
 ## engineering decisions
 
 - Fills happen at the next open, never the signaling close — no lookahead.
