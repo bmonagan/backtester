@@ -46,6 +46,7 @@ from backtester.strategy import (
     Strategy,
     TurtleTradingStrategy,
 )
+from backtester.validation import WalkForwardFold, walk_forward_splits
 
 __all__ = [
     "Bar",
@@ -95,4 +96,6 @@ __all__ = [
     "run_one",
     "compare",
     "format_table",
+    "WalkForwardFold",
+    "walk_forward_splits",
 ]
