@@ -194,6 +194,25 @@ factory on each test fold with fresh cash/positions and pre-test bars for
 indicator warm-up; it only queues orders during each test window. These
 utilities do not select parameters or access the predeclared top-25 holdout.
 
+The frozen-holdout runner is available as
+[`scripts/run_top25_holdout.py`](scripts/run_top25_holdout.py). It requires the
+unchanged frozen discovery parquet, a separate parquet with later bars, and an
+assumptions JSON containing complete `instrument_specs` and per-symbol
+`execution_models`. Run it with:
+
+```bash
+PYTHONPATH=src python scripts/run_top25_holdout.py \
+  --holdout-data data/top25-holdout.parquet \
+  --assumptions data/verified-market-assumptions.json
+```
+
+The runner refuses data that does not cover the predeclared holdout dates,
+missing instrument metadata, or missing execution profiles. It emits all
+25 frozen candidates under base/adverse/severe costs, with buy-and-hold and
+cash comparisons, block-bootstrap intervals, and Holm-adjusted p-values.
+The checked-in snapshot ends before the holdout starts, so this command cannot
+produce results until the full holdout and verified assumptions are supplied.
+
 ## engineering decisions
 
 - Fills happen at the next open, never the signaling close — no lookahead.

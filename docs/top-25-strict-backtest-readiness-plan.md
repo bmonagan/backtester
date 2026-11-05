@@ -303,14 +303,28 @@ recommendation.
   ledger, observes all pre-test bars for indicator warm-up, and only queues
   orders from the test window. Results include fold boundaries, funded-account
   metrics, fills, rejections, pending orders, and ending open positions.
+- Added a frozen-manifest holdout evaluator and CLI. It preserves all 25
+  candidates in original rank order, runs base/adverse/severe execution
+  profiles, records buy-and-hold and cash comparisons, and attaches
+  moving-block bootstrap intervals with Holm-adjusted candidate p-values.
+  The CLI verifies the frozen discovery CSV/parquet hashes and writes source
+  manifest, data, and assumptions hashes into the output rows.
 - Synthetic tests verify fold boundaries, expanding training history,
   timestamp deduplication, test-window separation, invalid input handling,
-  next-bar execution inside test windows, and per-fold account reset.
-- **Still outstanding:** no frozen top-25 runner or result report has been
-  implemented. The checked-in data snapshot ends November 2, 2026, while the
-  predeclared holdout starts November 3, 2026; therefore there are no holdout
-  observations in the frozen snapshot. Parameter selection, cost sensitivity,
-  regime coverage, bootstrap intervals, multiple-testing adjustment, and
-  cash/buy-and-hold comparisons remain to be implemented and run. The generic
-  runner does not claim that its single supplied strategy configuration was
-  selected by a training/validation protocol.
+  next-bar execution inside test windows, per-fold account reset, complete
+  candidate/scenario output, source-order preservation, and refusal when
+  holdout bars or complete market assumptions are missing.
+- Added circular moving-block bootstrap confidence intervals and mean-return
+  tests plus Holm correction to limit dependence-related underestimation and
+  family-wise false positives. These diagnostics do not remove discovery
+  selection bias.
+- **Still outstanding / blocked:** the frozen snapshot ends November 2, 2026;
+  the declared holdout is November 3, 2026–November 2, 2027. As of November
+  5, 2026, the full holdout does not exist, and no holdout performance report
+  has been run. There is also no verified instrument/cost assumptions file
+  for the selected symbols. A result from the discovery window is not a
+  substitute. Earlier phases still lack verified market metadata, calibrated
+  execution assumptions, complete futures rolls, and crypto funding; those
+  gaps prevent labeling any output market-realistic. Phase 6 therefore remains
+  in progress until the holdout interval and upstream assumptions are
+  available and audited.
